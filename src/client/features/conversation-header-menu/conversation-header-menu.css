@@ -1,0 +1,153 @@
+/* conversation-header-menu：会话名后的原生菜单入口。
+ * 只引用 DSH 令牌；颜色/字体跟随皮肤，尺寸属于功能层。 */
+
+/* 会话名后面的小下拉按钮，几何贴近 Claude 的标题下拉：紧贴标题、hover 才显底色。 */
+[data-ct-header-menu] {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--dsw-alias-label-tertiary, rgba(20, 20, 19, 0.5));
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  height: 20px;
+  justify-content: center;
+  margin-left: 2px;
+  padding: 0;
+  width: 22px;
+}
+
+[data-ct-header-menu] > svg {
+  display: block;
+}
+
+[data-ct-header-menu]:hover,
+[data-ct-header-menu][aria-expanded='true'] {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(20, 20, 19, 0.06));
+  color: var(--dsw-alias-label-primary, #141413);
+}
+
+[data-ct-header-menu]:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary, rgba(20, 20, 19, 0.4));
+  outline-offset: 1px;
+}
+
+/* 同一份原生菜单现在从标题旁打开：
+ *  - 右上角的原生 ⋯（ContextMenuButton）不再保留第二个入口；
+ *  - 右上角的「打开方式」快捷按钮收进菜单里的子菜单。
+ * 只命中会话 header（data-window-drag）内部，不碰文件树、会话行或右栏。 */
+header[data-window-drag] [class*='moreButton'],
+header[data-window-drag] [data-open-target='directory'] {
+  display: none !important;
+}
+
+/* 菜单本体：几何/交互属于功能层，颜色只引用 DSH 令牌。
+ * 抬升面用 bg-layer-1（浅色白、深色 #232324），不要用不存在的 bg-elevated；
+ * 阴影色同样走令牌，深浅两套主题各自生效。 */
+[data-ct-header-menu-panel],
+[data-ct-header-submenu] {
+  background: var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-base, #faf9f7));
+  border: 1px solid var(--dsw-alias-border-l2, rgba(20, 20, 19, 0.1));
+  border-radius: 10px;
+  box-shadow: 0 12px 32px var(--dsw-alias-bg-mask-1);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px;
+  position: fixed;
+  z-index: 60;
+}
+
+[data-ct-header-menu-panel] {
+  min-width: 232px;
+}
+
+[data-ct-header-submenu] {
+  min-width: 200px;
+}
+
+.ct-hm-item {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--dsw-alias-label-primary, #141413);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 13px;
+  gap: 8px;
+  height: 28px;
+  padding: 0 8px;
+  text-align: left;
+  width: 100%;
+}
+
+.ct-hm-item:hover:not(:disabled),
+.ct-hm-item:focus-visible {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(20, 20, 19, 0.06));
+  outline: none;
+}
+
+/* 禁用项与危险项都用 DSH 0.2.2 真实存在的令牌；label-quaternary / label-error
+ * 在本版本没有定义，回退值会把浅色墨色带到深色主题上。
+ * 禁用项在说明色上再压 0.7 不透明度，深浅两套都比正文明显更淡。 */
+.ct-hm-item:disabled {
+  color: var(--dsw-alias-label-caption, rgba(20, 20, 19, 0.3));
+  opacity: 0.7;
+  cursor: default;
+}
+
+.ct-hm-item[data-danger='true'] {
+  color: var(--dsw-alias-state-error-primary, #b3261e);
+}
+
+.ct-hm-icon {
+  align-items: center;
+  color: var(--dsw-alias-label-secondary, rgba(20, 20, 19, 0.65));
+  display: inline-flex;
+  flex: none;
+  height: 14px;
+  justify-content: center;
+  width: 14px;
+}
+
+.ct-hm-icon img {
+  display: block;
+  object-fit: contain;
+}
+
+.ct-hm-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ct-hm-shortcut {
+  color: var(--dsw-alias-label-tertiary, rgba(20, 20, 19, 0.45));
+  flex: none;
+  font-size: 12px;
+  margin-left: 12px;
+}
+
+.ct-hm-chevron {
+  color: var(--dsw-alias-label-tertiary, rgba(20, 20, 19, 0.45));
+  flex: none;
+}
+
+.ct-hm-sep {
+  background: var(--dsw-alias-border-l2, rgba(20, 20, 19, 0.1));
+  flex: none;
+  height: 1px;
+  margin: 4px 6px;
+}
+
+.ct-hm-empty {
+  color: var(--dsw-alias-label-tertiary, rgba(20, 20, 19, 0.45));
+  font-size: 12px;
+  padding: 8px;
+}

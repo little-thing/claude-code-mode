@@ -1,0 +1,122 @@
+﻿/* Served by GET /fork-tree/style.css, refreshed every 15 s.
+   The connector is a single 鈺?shape on the row itself: a vertical half-height
+   segment plus a horizontal at its bottom, rounded at the junction. Positions
+   come from measured pixel values (--ft-rail-x / --ft-elbow-w) and are
+   recomputed on resize, so the shape does not drift. */
+.ft-cell {
+  display: block;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+[data-ft-depth] {
+  position: relative !important;
+  box-sizing: border-box;
+  padding-left: var(--ft-pad, 0px) !important;
+  transition: background-color .12s ease;
+}
+
+/* We draw the whole 鈺?with ::after only; a full-height ::before is what used to
+   leave a "|" running past the corner. */
+[data-ft-depth]::before {
+  content: none;
+}
+
+[data-ft-depth]::after {
+  content: "";
+  position: absolute;
+  left: var(--ft-rail-x, 20px);
+  top: 0;
+  width: var(--ft-elbow-w, 12px);
+  /* Half of the row, capped to 10px: a wrapped title no longer stretches the vertical. */
+  height: 50%;
+  max-height: 10px;
+  pointer-events: none;
+  border-left: 1px solid var(--dsw-alias-label-tertiary, #9aa0a6);
+  border-bottom: 1px solid var(--dsw-alias-label-tertiary, #9aa0a6);
+  border-bottom-left-radius: 8px;
+  opacity: .8;
+  transition: opacity .12s ease, border-color .12s ease;
+}
+
+/* Ancestor-chain highlight. */
+[data-ft-hot] {
+  background-color: rgba(127, 127, 127, .08);
+}
+
+[data-ft-hot]::after {
+  opacity: 1;
+  border-left-color: var(--dsw-alias-label-primary, #ffffff);
+  border-bottom-color: var(--dsw-alias-label-primary, #ffffff);
+}
+
+/* Fork expander: a small "+" glued to the right of the session name.
+   It is appended INSIDE the title element, so hover-only row actions cannot
+   push it around; the glyph flips to "鈭? while the subtree is open.
+   Fixed size keeps the row geometry identical in both states. */
+.ft-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  box-sizing: border-box;
+  color: #22c55e;
+  font: 600 12px/12px system-ui, sans-serif;
+  vertical-align: -1px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ft-toggle:hover {
+  background: rgba(34, 197, 94, .14);
+}
+
+.ft-toggle[data-open="1"] {
+  border-color: rgba(34, 197, 94, .55);
+}
+
+.ft-toggle:focus-visible {
+  outline: 1px solid #22c55e;
+  outline-offset: 1px;
+}
+
+[data-ft-hidden] {
+  display: none !important;
+}
+
+/* State-independent fallback: shift the leading seat on child rows whatever
+   renders inside it (idle dot, working spinner, waiting clock). */
+[data-ft-depth] [data-slot="sidebar.session.row.leading"] {
+  transform: translateX(-1em);
+}
+/* Toggle placement: right edge of the title line, vertically centred, and
+   absolutely positioned so it can never shift the title text. */
+.ft-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  z-index: 3;
+}
+
+
+/* Marker rides the last character of the title. JS sets `position: relative`
+   plus a measured `top`, so no !important may lock those two properties. */
+.ft-toggle {
+  position: static;
+  transform: none;
+  z-index: auto;
+  margin: 0 0 0 7px;
+  vertical-align: middle;
+  align-self: center;
+  display: inline-flex;
+}

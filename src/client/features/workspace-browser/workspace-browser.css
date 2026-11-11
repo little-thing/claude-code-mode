@@ -1,0 +1,1861 @@
+/* workspace-browser 的结构样式。
+ *
+ * 这里是自绘的会话工作区，不依赖原生行 DOM。功能层只写布局/尺寸/交互；
+ * 行状态色与扫光色由皮肤令牌（--ct-wb-*）提供，缺皮肤时回退 DSH 主题令牌。
+ */
+
+.ct-wb {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+}
+
+.ct-wb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 8px 6px;
+  flex: none;
+}
+
+.ct-wb-heading {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+}
+
+.ct-wb-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ct-wb-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+.ct-wb-icon-btn:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.ct-wb-icon-btn.is-active {
+  color: var(--dsw-alias-label-primary);
+}
+
+.ct-wb-filter-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.ct-wb-search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 8px 6px;
+  padding: 0 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 6px;
+  background: var(--dsw-alias-bg-layer-1);
+  flex: none;
+}
+
+.ct-wb-search input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+}
+
+.ct-wb-search input::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.ct-wb-search-clear {
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.ct-wb-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 0 12px;
+  scrollbar-width: none;
+}
+
+.ct-wb-list::-webkit-scrollbar {
+  display: none;
+}
+
+.ct-wb-group {
+  position: relative;
+  margin: 0 0 2px;
+}
+
+/* 项目分组拖拽排序的插入线：按钮行本身不移动，只在分组上下沿画 2px 线。
+ * 颜色走 DSH 的 business primary 令牌，和分屏/焦点态保持一致。 */
+.ct-wb-group.is-workspace-drop-before::before,
+.ct-wb-group.is-workspace-drop-after::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 13px;
+  z-index: 2;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--dsw-alias-state-business-primary);
+  pointer-events: none;
+}
+
+.ct-wb-group.is-workspace-drop-before::before {
+  top: -2px;
+}
+
+.ct-wb-group.is-workspace-drop-after::after {
+  bottom: -2px;
+}
+
+.ct-wb-search-entry,
+.ct-wb-project {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 16px);
+  height: 36px;
+  margin: 0 14px 4px 2px;
+  padding: 7px 8px;
+  line-height: 20px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ct-wb-search-entry:hover,
+.ct-wb-project:hover,
+.ct-wb-search-entry.is-open {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.ct-wb-project {
+  user-select: none;
+}
+
+.ct-wb-folder {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.ct-wb-project-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.ct-wb-project-chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+  opacity: 0.6;
+  transition: opacity 100ms ease;
+}
+
+.ct-wb-project:hover .ct-wb-project-chevron,
+.ct-wb-project.is-expanded .ct-wb-project-chevron {
+  opacity: 1;
+}
+
+.ct-wb-project-actions {
+  display: inline-flex;
+  flex: none;
+  margin-left: auto;
+  gap: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ct-wb-project:hover .ct-wb-project-actions,
+.ct-wb-project:focus-within .ct-wb-project-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ct-wb-rows {
+  position: relative;
+}
+
+.ct-wb-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  margin: 2px 13px 0 8px;
+  padding: 0 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  /* 会话标题比分组标题更清晰；具体色值由皮肤 --ct-wb-row-text 决定，
+   * 缺皮肤时回退主文字色。 */
+  color: var(--ct-wb-row-text, var(--dsw-alias-label-primary));
+}
+
+.ct-wb-row:hover {
+  background: var(--ct-wb-row-hover-bg, var(--dsw-alias-interactive-bg-hover));
+}
+
+/* 当前打开会话比分屏中的其它选中项更重；两者同时出现时 current 覆盖 selected。
+ * 具体底色由皮肤 --ct-wb-row-* 定义，缺皮肤时回退 DSH 的 hover 令牌。 */
+.ct-wb-row.is-selected {
+  background: var(--ct-wb-row-selected-bg, var(--dsw-alias-interactive-bg-hover));
+  color: var(--dsw-alias-label-primary);
+}
+
+.ct-wb-row.is-current {
+  background: var(--ct-wb-row-current-bg, var(--dsw-alias-interactive-bg-hover));
+  color: var(--dsw-alias-label-primary);
+}
+
+/* 分屏时多个会话同时选中；hover 在选中/当前的底色上再提一档，而不是退回普通 hover。 */
+.ct-wb-row.is-selected:hover {
+  background: var(
+    --ct-wb-row-selected-hover-bg,
+    var(--ct-wb-row-selected-bg, var(--dsw-alias-interactive-bg-hover))
+  );
+}
+
+.ct-wb-row.is-current:hover {
+  background: var(
+    --ct-wb-row-current-hover-bg,
+    var(--ct-wb-row-current-bg, var(--dsw-alias-interactive-bg-hover))
+  );
+}
+
+.ct-wb-row.is-archived {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.ct-wb-row.is-hidden {
+  display: none !important;
+}
+
+.ct-wb-row.is-child {
+  padding-inline-start: 22px;
+}
+
+/* 一棵树只画一条连续树干；只有最后一个子项有横向连接线，且落在行的垂直中心。 */
+.ct-wb-row.is-child::before,
+.ct-wb-summary::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 24px;
+  top: -2px;
+  bottom: 0;
+  width: 1px;
+  background: var(--dsw-alias-border-l3);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.ct-wb-row.is-last-child::before {
+  bottom: 50%;
+}
+
+.ct-wb-row.is-last-child::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 24px;
+  top: 50%;
+  width: 14px;
+  height: 1px;
+  background: var(--dsw-alias-border-l3);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.ct-wb-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.ct-wb-status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-tertiary);
+}
+
+.ct-wb-status.is-running {
+  background: var(--dsw-alias-state-success-primary);
+}
+
+.ct-wb-status.is-pending {
+  background: var(--dsw-alias-state-warn-primary);
+}
+
+.ct-wb-status.is-unread {
+  background: var(--dsw-alias-state-business-primary);
+}
+
+.ct-wb-status.is-archived {
+  background: transparent;
+  border: 1px solid var(--dsw-alias-label-tertiary);
+}
+
+.ct-wb-title-wrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+}
+
+.ct-wb-title {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: var(--ct-wb-title-weight, 400);
+  line-height: 20px;
+}
+
+/* 运行中的会话：只在标题文字上叠一道扫光，行底色、文字颜色、选中按钮样式都不动。
+ * 做法和 DSH 原生 TextShimmer 一致：一个 aria-hidden 的副本复写原字形，
+ * 光带用 background-clip: text 裁进字形，再平移 background-position 扫过；
+ * 底字仍是 currentColor，副本只叠一层皮肤提供的光带（--ct-wb-shimmer-color），
+ * 浅色底上压白、深色底上提亮，选中/悬停/换肤不需要分支。
+ * 动画、时序和裁字属于功能；光带颜色属于皮肤，改颜色只改 skin.css。
+ * 时序对齐原生 TextShimmer：1.5s 一循环，前 2/3 扫过，steps(48) 保留颗粒感；
+ * 等待交互优先显示黄点，不触发；减少动态效果时整条装饰隐藏。 */
+@keyframes ct-wb-running-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  66.6667%,
+  to {
+    background-position: 0 0;
+  }
+}
+
+.ct-wb-title-sheen {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  user-select: none;
+  color: transparent;
+  background-image: linear-gradient(
+    105deg,
+    transparent 44%,
+    var(--ct-wb-shimmer-color, var(--dsw-static-neutral-00)) 49%,
+    var(--ct-wb-shimmer-color, var(--dsw-static-neutral-00)) 51%,
+    transparent 56%
+  );
+  background-repeat: no-repeat;
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 2px var(--ct-wb-shimmer-color, var(--dsw-static-neutral-00)));
+  animation: ct-wb-running-shimmer 1.5s steps(48, end) 0.3s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ct-wb-title-sheen {
+    display: none;
+  }
+}
+
+.ct-wb-row.is-child .ct-wb-title {
+  font-size: 14px;
+}
+
+.ct-wb-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+.ct-wb-toggle:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.ct-wb-toggle:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+.ct-wb-pin {
+  flex: none;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.ct-wb-time {
+  flex: none;
+  color: var(--dsw-alias-label-caption);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.ct-wb-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ct-wb-row:hover .ct-wb-more,
+.ct-wb-row.is-current .ct-wb-more,
+.ct-wb-row:focus-within .ct-wb-more {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ct-wb-more:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.ct-wb-menu {
+  position: fixed;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-1);
+}
+
+.ct-wb-filter-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 190px;
+}
+
+.ct-wb-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ct-wb-menu-item:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ct-wb-menu-item.is-checked {
+  font-weight: 500;
+}
+
+.ct-wb-check {
+  width: 12px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.ct-wb-empty {
+  padding: 24px 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.ct-wb-empty-group {
+  padding: 8px;
+  text-align: start;
+}
+
+.ct-wb-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 1300;
+  transform: translateX(-50%);
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 8px 12px;
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-toast-bg);
+  color: var(--dsw-alias-toast-label);
+  font-size: 13px;
+  box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-1);
+}
+
+/* 搜索是 flat 结果：标题 + 工作区 + Host 返回的 snippet。 */
+.ct-wb-search-list {
+  padding-top: 2px;
+}
+
+.ct-wb-search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ct-wb-search-row:hover {
+  background: var(--ct-wb-row-hover-bg, var(--dsw-alias-interactive-bg-hover));
+}
+
+.ct-wb-search-row.is-current {
+  background: var(--ct-wb-row-current-bg, var(--dsw-alias-interactive-bg-hover));
+}
+
+.ct-wb-search-row.is-current:hover {
+  background: var(
+    --ct-wb-row-current-hover-bg,
+    var(--ct-wb-row-current-bg, var(--dsw-alias-interactive-bg-hover))
+  );
+}
+
+.ct-wb-search-row.is-archived {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.ct-wb-search-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ct-wb-search-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.ct-wb-search-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.ct-wb-search-workspace {
+  flex: none;
+}
+
+.ct-wb-search-snippet {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ct-wb-search-status {
+  padding: 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+/* 行悬浮预览卡：仿 Claude 的会话卡片，放在侧栏右侧。 */
+.ct-wb-hover-card {
+  position: fixed;
+  z-index: 1100;
+  width: 300px;
+  padding: 12px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-lg);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  box-shadow: 0 12px 32px var(--dsw-alias-bg-mask-1);
+  pointer-events: none;
+}
+
+.ct-wb-hover-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+}
+
+.ct-wb-hover-time,
+.ct-wb-hover-status,
+.ct-wb-hover-workspace,
+.ct-wb-hover-path {
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.ct-wb-hover-status::before {
+  content: '●';
+  margin-inline-end: 4px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 8px;
+}
+
+/* 拖拽中原位置只保留空占位；跟随光标的由浏览器拖拽图像承担。 */
+.ct-wb-row.is-dragging,
+.ct-wb-row.is-dragging:hover {
+  background: transparent;
+}
+
+.ct-wb-row.is-dragging > * {
+  visibility: hidden;
+}
+
+.ct-wb-row.is-dragging::before,
+.ct-wb-row.is-dragging::after {
+  opacity: 0;
+}
+
+
+.ct-wb-group.is-pinned.is-pin-active {
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 2px var(--dsw-alias-state-business-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ct-wb-group.is-pinned .ct-wb-pin {
+  display: none;
+}
+
+.ct-wb-pin-hint {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 16px);
+  height: 36px;
+  margin: 0 14px 4px 2px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.ct-wb-pin-hint-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.ct-wb-group.is-pinned.is-drop-preview {
+  overflow: hidden;
+  animation: ct-wb-pin-preview-in 180ms ease-out both;
+}
+
+@keyframes ct-wb-pin-preview-in {
+  from {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  to {
+    max-height: 96px;
+    opacity: 1;
+  }
+}
+
+.ct-wb-group.is-pin-active .ct-wb-pin-hint {
+  color: var(--dsw-alias-label-primary);
+}
+
+.ct-wb-menu-label {
+  padding: 6px 8px 3px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.ct-wb-menu-separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--dsw-alias-border-l1);
+}
+
+.ct-wb-menu-subrow {
+  display: flex;
+  gap: 2px;
+  padding: 0 2px;
+}
+
+.ct-wb-menu-subrow .ct-wb-menu-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.ct-wb-menu-item.is-disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ct-wb-group-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.ct-wb-group-flat {
+  margin: 0;
+}
+
+.ct-wb-group-flat > .ct-wb-rows {
+  padding-top: 0;
+}
+
+.ct-wb-group.is-section.is-section-drop {
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 2px var(--dsw-alias-state-business-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ct-wb-menu-item.is-danger:not(:disabled) {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+/* 全量会话页：右侧主面板，活跃 / 已归档两个 tab。 */
+.ct-sessions-page {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 40px 48px;
+  overflow-y: auto;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.ct-sessions-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ct-sessions-head h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 500;
+}
+
+.ct-sessions-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ct-sessions-close:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ct-sessions-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 12px;
+}
+
+.ct-sessions-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ct-sessions-tab {
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ct-sessions-tab.is-active {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.ct-sessions-search {
+  width: 220px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  outline: none;
+}
+
+.ct-sessions-search:focus {
+  border-color: var(--dsw-alias-state-business-primary);
+}
+
+.ct-sessions-new {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-layer-1);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ct-sessions-list {
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+
+.ct-sessions-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ct-sessions-item:hover {
+  background: var(--ct-wb-row-hover-bg, var(--dsw-alias-interactive-bg-hover));
+}
+
+.ct-sessions-item.is-current {
+  background: var(--ct-wb-row-current-bg, var(--dsw-alias-interactive-bg-hover));
+}
+
+.ct-sessions-item.is-current:hover {
+  background: var(
+    --ct-wb-row-current-hover-bg,
+    var(--ct-wb-row-current-bg, var(--dsw-alias-interactive-bg-hover))
+  );
+}
+
+.ct-sessions-item-main {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ct-sessions-item-workspace,
+.ct-sessions-item-time {
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.ct-sessions-item-workspace {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ct-sessions-empty {
+  padding: 48px 4px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+}
+
+/* 折叠 fork 后保留一条可点击的嵌套会话摘要。 */
+.ct-wb-summary {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.ct-wb-summary:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.ct-wb-summary-text {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* 视图菜单：主行 + 右侧二级子菜单。 */
+.ct-wb-view-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ct-wb-view-row:hover,
+.ct-wb-view-row.is-open {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ct-wb-view-row-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.ct-wb-view-row-value {
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+}
+
+.ct-wb-view-row-chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.ct-wb-view-submenu {
+  z-index: 1201;
+}
+
+/* 自绘输入/确认弹窗，替代浏览器 prompt/confirm。 */
+.ct-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--dsw-alias-bg-mask-1);
+}
+
+.ct-dialog {
+  box-sizing: border-box;
+  width: min(520px, 100%);
+  padding: 24px;
+  border-radius: var(--dsw-radius-lg);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  box-shadow: 0 18px 48px var(--dsw-alias-bg-mask-1);
+}
+
+.ct-dialog-title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 500;
+}
+
+.ct-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.ct-dialog-label {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ct-dialog-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--dsw-alias-state-business-primary);
+  border-radius: 8px;
+  outline: none;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 14px;
+}
+
+.ct-dialog-input::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.ct-dialog-message {
+  margin: 16px 0 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.ct-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.ct-dialog-button {
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ct-dialog-button:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ct-dialog-button.is-primary {
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-bg-layer-1);
+}
+
+.ct-dialog-button.is-primary:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ct-dialog-button.is-primary.is-danger {
+  background: var(--dsw-alias-state-error-primary);
+  color: var(--dsw-alias-bg-layer-1);
+}
+
+/* 分区内部的日期/状态子分组。 */
+.ct-wb-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ct-wb-subgroup-label {
+  padding: 7px 4px 2px 30px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* 顶部搜索入口：放在原生「新会话」按钮下方，替代原「工作区」标题行。 */
+.ct-wb-search-entry-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.ct-wb-search-entry-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.ct-wb-search-entry-shortcut {
+  flex: none;
+  margin-left: auto;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+.ct-wb-search-entry:hover .ct-wb-search-entry-shortcut,
+.ct-wb-search-entry:focus-visible .ct-wb-search-entry-shortcut {
+  opacity: 1;
+}
+
+
+.ct-search-empty-action {
+  margin-top: 10px;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ct-wb-empty-action {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-link);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* 全局搜索弹窗：参考 Claude 的搜索面板。 */
+.ct-search-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 11vh 24px 24px;
+  background: var(--dsw-alias-bg-mask-1);
+}
+
+.ct-search-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(900px, 100%);
+  max-height: 78vh;
+  overflow: hidden;
+  border-radius: var(--dsw-radius-xl);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  box-shadow: 0 24px 60px var(--dsw-alias-bg-mask-1);
+}
+
+.ct-search-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 24px 14px;
+}
+
+.ct-search-head-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.ct-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 20px;
+  line-height: 32px;
+}
+
+.ct-search-input::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.ct-search-close {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ct-search-close:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ct-search-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 20px 12px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+.ct-search-tab {
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ct-search-tab:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ct-search-tab.is-active {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.ct-search-body {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  padding: 10px 12px 16px;
+}
+
+.ct-search-section + .ct-search-section {
+  margin-top: 8px;
+}
+
+.ct-search-section-label {
+  padding: 6px 12px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ct-search-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ct-search-result:hover,
+.ct-search-result.is-selected {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.ct-search-result-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.ct-search-result-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ct-search-result-meta {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.ct-search-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 12px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 14px;
+  text-align: center;
+}
+
+.ct-search-status {
+  padding: 18px 12px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+}
+
+.ct-search-footer {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.ct-search-footer kbd {
+  display: inline-flex;
+  min-width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  margin-left: 3px;
+  padding: 0 4px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 4px;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 11px;
+}
+
+
+/* 拖拽时跟随指针的提示，风格对应 Claude 的拖放提示。 */
+.ct-wb-drag-hint {
+  position: fixed;
+  z-index: 1600;
+  padding: 6px 10px;
+  border-radius: var(--dsw-radius-md);
+  background: color-mix(in srgb, var(--dsw-alias-state-error-primary) 12%, var(--dsw-alias-bg-layer-1));
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 18px var(--dsw-alias-bg-mask-1);
+}
+
+/* 分屏分割线：hover 可拖拽调整大小；默认与整体面板的细分割线一致。 */
+.ct-split-resizer {
+  position: absolute;
+  z-index: 60;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.ct-split-resizer[data-orientation="vertical"] {
+  width: 7px;
+  cursor: col-resize;
+}
+
+.ct-split-resizer[data-orientation="horizontal"] {
+  height: 7px;
+  cursor: row-resize;
+}
+
+.ct-split-resizer::after {
+  content: '';
+  position: absolute;
+  background: transparent;
+  transition: background-color 120ms ease;
+}
+
+.ct-split-resizer[data-orientation="vertical"]::after {
+  left: 3px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.ct-split-resizer[data-orientation="horizontal"]::after {
+  left: 0;
+  right: 0;
+  top: 3px;
+  height: 1px;
+}
+
+.ct-split-resizer:hover::after,
+.ct-split-resizer.is-dragging::after {
+  background: var(--dsw-alias-state-business-primary);
+}
+
+/* native header 里的 pane 关闭按钮：右栏开着先关右栏，右栏关掉后关闭 pane。 */
+.ct-split-pane-close {
+  flex: none;
+  margin: 0 2px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ct-split-pane-close:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+/* ==== 原生侧栏壳（0.2.2）====================================================
+ * 与 DSH 的 SidebarRoot 对齐：
+ *  - 展开态只滚中间内容：新建、面板、搜索、会话列表一起滚；
+ *  - 顶部 header（折叠按钮行）与底部设置区固定，不参与滚动；
+ *  - 顶部品牌行只留折叠按钮，删掉 logo；
+ *  - 「新建」与面板行/搜索入口同款：透明底、左对齐、同高同圆角、hover 提亮。
+ * 标记由 index.js 的 installSidebarShell() 打，CSS 不依赖哈希类名。
+ */
+
+/* 侧栏根只负责头尾固定；中间内容在 [data-ct-sidebar-scroll] 里滚动。 */
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] {
+  padding-top: 0;
+  overflow: hidden;
+}
+
+/* 中间滚动容器：header 与底部在它外面，滚动条只覆盖新建到列表这一段。
+ * 右边缘外扩 4px、同一位置补回 4px 内边距：滚动条离侧栏右边缘 4px
+ * （原来落在 root 的 8px 内边距上），内容列宽和行位置保持不变。 */
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] > [data-ct-sidebar-scroll] {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-right: -4px;
+  padding-right: 4px;
+  /* Claude 的侧栏滚动条：8px 轨道 + 1px 透明内边距，拇指实际 6px 宽。 */
+  --dsh-scrollbar-width: 8px;
+  --dsh-scrollbar-thumb-border: 1px;
+  --dsh-scrollbar-thumb: var(--ct-wb-scrollbar-thumb, var(--dsw-alias-scrollbar-bg-l2));
+  --dsh-scrollbar-thumb-hover: var(--ct-wb-scrollbar-thumb-hover, var(--dsw-alias-scrollbar-hover-l2));
+  /* 滚动区底部始终有分隔线；顶部先占 1px 透明边，离开顶部后只换颜色，
+   * 避免滚动时因为加边框导致内容跳动。 */
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'][data-ct-sidebar-scrolled] > [data-ct-sidebar-scroll] {
+  border-top-color: var(--dsw-alias-border-l1);
+}
+
+/* 折叠态回到原生列布局：容器本身不生成盒子，三个座位重新成为根的 flex 子项。 */
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='true'] > [data-ct-sidebar-scroll] {
+  display: contents;
+}
+
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-region] {
+  flex: none;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+/* 新版 DSH 把面板与工作区收进 scrollRegion/scrollArea；同样解除它们自己的滚动。 */
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-scrollregion] {
+  flex: none;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-scrollarea] {
+  flex: none;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] .ct-wb {
+  height: auto;
+  min-height: 0;
+}
+
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] .ct-wb-list {
+  flex: none;
+  min-height: 0;
+  overflow: visible;
+}
+
+/* 底部设置区在滚动容器外，固定占位，不参与中间滚动。 */
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-foot] {
+  flex: none;
+}
+
+/* 顶部 header：在滚动容器外，固定占位；只留折叠按钮。
+ * root 去掉上内边距，header 用 10px 上内边距保持原来按钮高度。 */
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-logo='toggle'] {
+  flex: none;
+  height: 42px;
+  margin-left: -8px;
+  margin-right: -8px;
+  padding: 10px 8px 4px;
+  justify-content: flex-end;
+}
+
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-logo='toggle'] > :not([data-ct-sidebar-toggle]) {
+  display: none;
+}
+
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-logo='empty'] {
+  display: none;
+}
+
+/* 新建：与面板行同款。 */
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-new] {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  height: 36px;
+  margin: 0 0 2px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: var(--dsw-radius-md);
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+  text-align: left;
+  cursor: pointer;
+}
+
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-new]:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-new] > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-new] > span:first-child > span {
+  width: auto;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-new] > span:last-child {
+  flex: none;
+  margin-left: auto;
+}
+
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] [data-ct-sidebar-new] svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+/* 顶部搜索入口与面板行/新建行共用同一圆角，菜单项观感一致。 */
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] .ct-wb-search-entry {
+  border-radius: var(--dsw-radius-md);
+}
+
+/* 搜索入口与新建/面板行左右对齐（同一列宽）。 */
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] .ct-wb-search-entry {
+  width: calc(100% - 8px);
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+/* 搜索入口初始文字与新建/面板行同色，hover 再提亮。 */
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] .ct-wb-search-entry {
+  color: var(--dsw-alias-label-primary);
+}
+
+/* ==== 会话壳 ==============================================================
+ * 每个会话一个壳：壳内是完整原生会话 + 自己的右栏；分屏只决定壳的 rect。
+ * 右栏宽度由该会话自己的 store 决定（SidePanel 写 data-sidebar-right-open），
+ * 不经过窗口级 layout 的 rightbar 列。 */
+
+.ct-shell-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-base);
+}
+
+.ct-shell-cell {
+  position: absolute;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ct-shell-cell[data-ct-shell-focused] {
+  z-index: 1;
+}
+
+/* 壳之间的常驻细分割线：伪元素画在内容之上，不会被会话/右栏背景盖住。 */
+.ct-shell-cell[data-ct-shell-edge-x]::before,
+.ct-shell-cell[data-ct-shell-edge-y]::after {
+  content: '';
+  position: absolute;
+  background: var(--dsw-alias-border-l2);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.ct-shell-cell[data-ct-shell-edge-x]::before {
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.ct-shell-cell[data-ct-shell-edge-y]::after {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+}
+
+.ct-shell {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--dsw-alias-bg-base);
+}
+
+.ct-shell-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.ct-shell-main > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.ct-shell-rightbar {
+  display: flex;
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  /* 展开时左边缘画 1px 分割线；box-sizing 让保存的宽度就是渲染宽度。 */
+  box-sizing: border-box;
+}
+
+.ct-shell-rightbar > * {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.ct-shell-rightbar:has([data-sidebar-right-open="true"]) {
+  flex: 0 0 var(--ct-shell-rightbar-w, 40%);
+  width: var(--ct-shell-rightbar-w, 40%);
+  min-width: 180px;
+  max-width: 50%;
+  border-left: 1px solid var(--dsw-alias-border-l2);
+}
+
+/* 壳内右栏宽度拖拽：把手浮在右栏左边缘，只在右栏展开时出现。 */
+.ct-shell {
+  position: relative;
+}
+
+.ct-shell-rightbar-handle {
+  display: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: calc(40% - 3px);
+  width: 7px;
+  cursor: col-resize;
+  z-index: 7;
+}
+
+.ct-shell-rightbar-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 1px;
+  background: transparent;
+  transition: background-color 120ms ease;
+}
+
+.ct-shell-rightbar-handle:hover::after {
+  background: var(--dsw-alias-state-business-primary, var(--dsw-alias-brand-primary));
+}
+
+.ct-shell:has(> .ct-shell-rightbar [data-sidebar-right-open="true"]) > .ct-shell-rightbar-handle {
+  display: block;
+}
+
+/* 面板最大化：当前面板铺满整个会话壳，而不是只铺满右栏那一列。
+ * 最大化状态由 conversation-side-panel 写在 `.ct-sp-root` 上（与
+ * `data-sidebar-right-open` 同级的 DOM 契约）；壳只负责把右栏容器从一列
+ * 换成整块覆盖。主区保留 DOM 与滚动位置但不可见，还原按钮在面板头上。 */
+.ct-shell:has(> .ct-shell-rightbar .ct-sp-root[data-ct-sp-maximized]) > .ct-shell-main {
+  visibility: hidden;
+}
+
+.ct-shell:has(> .ct-shell-rightbar .ct-sp-root[data-ct-sp-maximized]) > .ct-shell-rightbar {
+  border-left: none;
+  flex: none;
+  inset: 0;
+  max-width: none;
+  min-width: 0;
+  position: absolute;
+  width: auto;
+  z-index: 6;
+}
+
+.ct-shell:has(> .ct-shell-rightbar .ct-sp-root[data-ct-sp-maximized]) > .ct-shell-rightbar-handle {
+  display: none;
+}
+
+/* 拖拽落点层：覆盖内容区，只在拖拽会话时出现。 */
+.ct-split-drop-layer {
+  position: fixed;
+  z-index: 46;
+  pointer-events: auto;
+}
+
+.ct-split-drop-preview {
+  position: fixed;
+  z-index: 47;
+  box-sizing: border-box;
+  border: 1.5px solid var(--dsw-alias-brand-primary);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 9%, transparent);
+  pointer-events: none;
+}
+
+.ct-split-drop-preview[data-zone="replace"] {
+  background: color-mix(in srgb, var(--dsw-alias-brand-primary) 6%, transparent);
+}
+
+.ct-split-drop-pill {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-label-primary-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px var(--dsw-alias-bg-mask-1);
+}
+
+.ct-split-drop-hint {
+  position: fixed;
+  z-index: 48;
+  padding: 5px 10px;
+  border: 1px solid var(--dsw-alias-border-l3);
+  border-radius: 7px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 18px var(--dsw-alias-bg-mask-1);
+}

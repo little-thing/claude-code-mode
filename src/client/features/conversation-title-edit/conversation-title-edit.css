@@ -1,0 +1,43 @@
+/* conversation-title-edit：会话 header 顶部标题的点击编辑。
+ * 几何、光标与命中区域属于功能层；颜色只引用 DSH 令牌。 */
+
+/* 原生标题是当前会话面包屑里的纯文本 span（lineage 容器的前一个兄弟），
+ * 安装器只给它打标记。选择器带 span 提高特异性，压过原生
+ * `.crumb` / `.crumbCurrent` 的 cursor。 */
+span[data-ct-session-title] {
+  cursor: text;
+  /* 桌面端 header 是窗口拖拽区；标题要能接收点击，只让出标题文字这一小块。 */
+  -webkit-app-region: no-drag;
+}
+
+@media (hover: hover) {
+  span[data-ct-session-title]:hover {
+    background: var(--dsw-alias-interactive-bg-hover, rgba(20, 20, 19, 0.06));
+  }
+}
+
+/* 编辑标题期间，同一 header 里标题旁的下拉按钮暂时让位：
+ * 保留占位避免标题行宽度跳动，按钮不可见也不可点。 */
+[data-ct-title-editing] [data-ct-header-menu] {
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* 编辑框覆盖在原生标题的位置上；尺寸与字体由安装器按标题实测值注入，
+ * 这里只管与 DSH 输入控件一致的边框、底色和焦点描边。 */
+.ct-title-editor {
+  background: var(--dsw-alias-bg-layer-1, #faf9f7);
+  border: 1px solid var(--dsw-alias-border-l2, rgba(20, 20, 19, 0.1));
+  border-radius: var(--dsw-radius-md, 6px);
+  box-sizing: border-box;
+  margin: 0;
+  outline: none;
+  padding: 0 7px;
+  position: fixed;
+  z-index: 70;
+}
+
+.ct-title-editor:focus {
+  border-color: var(--dsw-alias-brand-primary, rgba(20, 20, 19, 0.4));
+  box-shadow: 0 0 0 1px var(--dsw-alias-brand-primary, rgba(20, 20, 19, 0.4));
+}

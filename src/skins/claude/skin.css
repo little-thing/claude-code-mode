@@ -1,0 +1,115 @@
+/* Claude skin — 皮肤层。
+ *
+ * 这里只允许出现「观感」：颜色、字体、圆角、阴影、间距节奏。
+ * 不允许出现布局或交互（工作区列表、树、折叠、排序等属于 features/workspace-browser）。
+ *
+ * 选择器一律挂在 body[data-ct-skin="claude"] 下：皮肤可切换，
+ * 换掉 body 属性就是换一套观感，功能不受影响。
+ *
+ * 深浅两套主题共用一组色相：浅色块定义墨色与派生关系，深色块只翻转墨色
+ * 并按深色底提亮/加浓几个 alpha。任何颜色都不在浅色块里写死成绝对色值，
+ * 否则深色主题会继续用浅色的字色/描边（历史上分组图标、chevron、行操作
+ * 按钮就是这样在深色下消失的）。
+ */
+
+body[data-ct-skin='claude'] {
+  --ct-accent: #d97757;
+  --ct-canvas: #faf9f5;
+  --ct-sidebar: #f0eee6;
+  --ct-ink: #141413;
+  --ct-ink-soft: #5f5d55;
+  --ct-line: rgb(20 20 19 / 12%);
+
+  /* 画布与侧栏：侧栏比对话区浅一档的暖灰，和 Claude 桌面端的分栏关系一致。
+   * --dsw-specific-sidebar-fill 是 DSH 侧栏列/标题行的底色令牌，深浅两套都从 --ct-sidebar 派生。 */
+  --dsw-specific-sidebar-fill: var(--ct-sidebar);
+  --dsw-alias-bg-base: var(--ct-canvas);
+
+  /* 输入框、问答卡（DSH 的 QuestionComposer）这一类抬升面。
+   * 浅色：白卡浮在暖灰画布上，和 DSH 原生的层次一致（差 5-6 级）。
+   * 深色：DSH 的固定值是按近黑画布定的，放到暖灰画布上会贴平，见深色块。 */
+  --dsw-specific-input-major: #ffffff;
+
+  /* 文字层级：主文字用墨色，次级用墨色柔化，三级/说明从墨色按 alpha 派生。
+   * 派生而不写死，深色主题翻墨色时它们跟着翻；alpha 见深色块（深色底要更亮一档）。 */
+  --dsw-alias-label-primary: var(--ct-ink);
+  --dsw-alias-label-secondary: var(--ct-ink-soft);
+  --dsw-alias-label-tertiary: color-mix(in srgb, var(--ct-ink) 48%, transparent);
+  --dsw-alias-label-caption: color-mix(in srgb, var(--ct-ink) 39%, transparent);
+
+  /* 描边与交互底色同理：浅色下是 16% 墨色描边、5% 墨色悬停，深色下换成亮墨色。 */
+  --dsw-alias-border-l1: var(--ct-line);
+  --dsw-alias-border-l2: color-mix(in srgb, var(--ct-ink) 16%, transparent);
+  --dsw-alias-interactive-bg-hover: color-mix(in srgb, var(--ct-ink) 5%, transparent);
+
+  /* workspace-browser 会话行状态。功能层只引用 --ct-wb-*，颜色与深浅只在这里改：
+   * 普通悬停 < 分屏选中（非聚焦） < 当前打开会话；悬停在对应底色上再提一档。
+   * 缺皮肤时功能层回退 DSH 主题令牌，行仍然可用。 */
+  --ct-wb-row-hover-bg: color-mix(in srgb, var(--ct-ink) 5%, transparent);
+  --ct-wb-row-selected-bg: color-mix(in srgb, var(--ct-ink) 6%, transparent);
+  --ct-wb-row-selected-hover-bg: color-mix(in srgb, var(--ct-ink) 8%, transparent);
+  --ct-wb-row-current-bg: color-mix(in srgb, var(--ct-ink) 10%, transparent);
+  --ct-wb-row-current-hover-bg: color-mix(in srgb, var(--ct-ink) 13%, transparent);
+  /* 会话行正文比分组标题更重：Claude 的列表标题接近 75% 墨色，不是柔和的次级灰。 */
+  --ct-wb-row-text: color-mix(in srgb, var(--ct-ink) 78%, transparent);
+  --ct-wb-title-weight: 500;
+
+  /* 侧栏滚动条：Claude 的 8px 轨道、20% 墨色拇指，悬停提到 35%。 */
+  --ct-wb-scrollbar-thumb: color-mix(in srgb, var(--ct-ink) 20%, transparent);
+  --ct-wb-scrollbar-thumb-hover: color-mix(in srgb, var(--ct-ink) 35%, transparent);
+
+  /* 运行中会话标题扫光的光带颜色；动画、时序和裁字都在 features/workspace-browser。 */
+  --ct-wb-shimmer-color: #ffffff;
+
+  --dsw-font-family:
+    'Anthropic Sans Web Text', 'Claude Style Inter', 'PingFang SC', 'Noto Sans SC',
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+
+  --dsw-radius-sm: 6px;
+  --dsw-radius-md: 8px;
+  --dsw-radius-lg: 12px;
+
+  /* 共享 Tooltip 的圆角：功能层只引用变量，缺皮肤时保持方角。 */
+  --ct-tooltip-radius: 6px;
+
+  /* 会话内图片灯箱的遮罩深浅：改这一个值，原生消息图片、输入框附件、
+     工具行缩略图、交付图片的预览一起变。 */
+  --ct-image-preview-mask: rgb(0 0 0 / 72%);
+}
+
+/* ImageLightbox 的结构是 dialog > stage > img；只命中图片灯箱，
+   不影响普通 Modal 的遮罩。 */
+body[data-ct-skin='claude'] [role='dialog'][aria-modal='true']:has(> div > img) {
+  --dsw-alias-bg-mask-1: var(--ct-image-preview-mask);
+}
+
+/* 深色：Claude 的暗色画布偏暖，不用纯黑。 */
+body[data-ct-skin='claude'][data-ds-dark-theme] {
+  --ct-canvas: #262624;
+  --ct-sidebar: #1f1e1d;
+  --ct-ink: #f5f4ef;
+  --ct-ink-soft: #b7b5ad;
+  --ct-line: rgb(245 244 239 / 14%);
+
+  /* 输入框与问答卡的抬升面。DSH 深色把它定成 #2c2c2e，那是按 #151517 画布算出的
+   * 23 级抬升；Claude 的深色画布是暖灰 #262624，同一个值只剩 6 级，卡片和背景贴平，
+   * 问答框看起来像一串散字浮在页面上。按画布重算成墨色 11% 叠画布 ≈ #3d3c3a，
+   * 实测渲染后卡片比页面亮 19 级（原生 23 级），一眼能分出边界；浅色不参与这一档。 */
+  --dsw-specific-input-major: color-mix(in srgb, var(--ct-ink) 11%, var(--ct-canvas));
+
+  /* 深色底吸光，浅色那档 alpha 直接搬过来会淡到看不见（外观实测：浅色 3.2:1 的分组图标
+   * 在深色只剩 1.9:1，chevron 叠加 0.6 透明度后 1.4:1）。这里按深色底重算：
+   * 三级文字 5.6:1、说明/时间戳 4.0:1、描边 1.6:1、悬停底 8% 墨色。 */
+  --dsw-alias-label-tertiary: color-mix(in srgb, var(--ct-ink) 56%, transparent);
+  --dsw-alias-label-caption: color-mix(in srgb, var(--ct-ink) 44%, transparent);
+  --dsw-alias-border-l2: color-mix(in srgb, var(--ct-ink) 18%, transparent);
+  --dsw-alias-interactive-bg-hover: color-mix(in srgb, var(--ct-ink) 8%, transparent);
+
+  /* 深色底上当前会话要明显重于普通悬停；桌面端侧栏是半透明磨砂底，
+   * 用当前墨色提亮比沿用 DSH 的深色 hover 更稳定。 */
+  --ct-wb-row-hover-bg: color-mix(in srgb, var(--ct-ink) 8%, transparent);
+  --ct-wb-row-selected-bg: color-mix(in srgb, var(--ct-ink) 10%, transparent);
+  --ct-wb-row-selected-hover-bg: color-mix(in srgb, var(--ct-ink) 12%, transparent);
+  --ct-wb-row-current-bg: color-mix(in srgb, var(--ct-ink) 14%, transparent);
+  --ct-wb-row-current-hover-bg: color-mix(in srgb, var(--ct-ink) 18%, transparent);
+}

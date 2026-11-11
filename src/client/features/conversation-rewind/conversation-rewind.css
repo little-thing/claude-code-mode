@@ -1,0 +1,321 @@
+/* conversation-rewind：动作行、确认弹窗、回退提示条、灯箱。只用主题令牌。 */
+.ct-rw-user-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ct-rw-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: calc(28px + var(--dsh-content-font-delta, 0px));
+}
+
+.ct-rw-time {
+  padding-right: 4px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: var(--dsh-content-font-size-secondary, 13px);
+  line-height: calc(24px + var(--dsh-content-font-delta, 0px));
+  white-space: nowrap;
+}
+
+.ct-rw-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(28px + var(--dsh-content-font-delta, 0px));
+  height: calc(28px + var(--dsh-content-font-delta, 0px));
+  padding: 6px;
+  border: none;
+  border-radius: var(--dsw-radius-sm);
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+.ct-rw-action svg {
+  width: calc(15px + var(--dsh-content-font-delta, 0px));
+  height: calc(15px + var(--dsh-content-font-delta, 0px));
+}
+
+.ct-rw-action:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.ct-rw-action:focus-visible {
+  outline: 1px solid var(--dsw-alias-brand-primary);
+  outline-offset: 1px;
+}
+
+.ct-rw-action:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.ct-rw-spinner {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: ct-rw-spin 700ms linear infinite;
+}
+
+@keyframes ct-rw-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ct-rw-notice {
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* 整行动作默认隐藏（含时间/用量），悬停消息或键盘聚焦时整行出现。 */
+@media (hover: hover) {
+  .ct-rw-user-actions {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .ct-rw-user-row:hover .ct-rw-user-actions,
+  .ct-rw-user-row:focus-within .ct-rw-user-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  [data-chat-flow-kind='turn-tail'] [data-clock='end'] {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  [data-chat-flow-kind='turn-tail'][data-ct-hover-assistant] [data-clock='end'],
+  [data-chat-flow-kind='turn-tail']:focus-within [data-clock='end'] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* 回退范围内节点的隐藏哨兵：把承载它的 flow item 整体折掉。哨兵在
+ * conversation.chat.node 出口里面，所以不能用直接子代选择器；分组和 turn-process
+ * 行也必须一起折掉，否则会残留「处理失败 / 已停止」和空行间距。 */
+.ct-rw-hidden {
+  display: none !important;
+}
+
+[data-chat-flow-key]:has(.ct-rw-hidden) {
+  display: none !important;
+}
+
+/* 确认弹窗 */
+.ct-rw-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--dsw-alias-bg-mask-1);
+}
+
+.ct-rw-dialog {
+  box-sizing: border-box;
+  width: min(560px, 100%);
+  max-height: min(720px, calc(100vh - 48px));
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-lg);
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  box-shadow: 0 18px 48px var(--dsw-alias-bg-mask-1);
+}
+
+.ct-rw-dialog-title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 500;
+}
+
+.ct-rw-dialog-text {
+  margin: 12px 0 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.ct-rw-dialog-files {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-md);
+}
+
+.ct-rw-dialog-label {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ct-rw-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 180px;
+  margin: 0;
+  padding: 0 0 0 18px;
+  overflow: auto;
+  color: var(--dsw-alias-label-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ct-rw-dialog-more {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.ct-rw-dialog-note {
+  margin: 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ct-rw-dialog-quote {
+  margin: 16px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ct-rw-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.ct-rw-dialog-button {
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ct-rw-dialog-button:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.ct-rw-dialog-button.is-primary {
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-foreground);
+}
+
+.ct-rw-dialog-button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* 已回退到此处 / 撤销回退：会话滚动内容末尾，跟随历史一起滚动。
+ * 上方与最后一条消息（动作行）拉开到接近一行的间距，下方只留与输入框的呼吸感。 */
+.ct-rw-dock {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 0 12px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.ct-rw-dock-label {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.ct-rw-dock-undo-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.ct-rw-dock-undo {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.ct-rw-dock-undo:hover:not(:disabled) {
+  color: var(--dsw-alias-link);
+}
+
+.ct-rw-dock-undo:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.ct-rw-dock-detail {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+/* Toast */
+.ct-rw-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 92px;
+  z-index: 1700;
+  box-sizing: border-box;
+  max-width: min(560px, calc(100vw - 48px));
+  padding: 8px 14px;
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-toast-bg);
+  color: var(--dsw-alias-toast-label);
+  box-shadow: 0 10px 28px var(--dsw-alias-bg-mask-1);
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.ct-rw-dialog-error {
+  margin: 14px 0 0;
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 12px;
+  line-height: 18px;
+  word-break: break-word;
+}

@@ -1,0 +1,31 @@
+/* 共享 Tooltip：定位/动画/尺寸在这里，颜色与圆角只引用令牌。
+ * 圆角由皮肤提供（--ct-tooltip-radius），缺皮肤时保持方角但可读。
+ */
+
+.ct-tooltip-trigger {
+  display: contents;
+}
+
+.ct-tooltip {
+  position: fixed;
+  z-index: 10000;
+  left: -9999px;
+  top: -9999px;
+  max-width: 240px;
+  padding: 5px 8px;
+  border-radius: var(--ct-tooltip-radius, 0);
+  background: var(--dsw-alias-tooltip-bg);
+  color: var(--dsw-static-neutral-bluish-00);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  animation: ct-tooltip-in 80ms ease both;
+}
+
+@keyframes ct-tooltip-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

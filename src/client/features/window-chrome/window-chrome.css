@@ -1,0 +1,126 @@
+/* window-chrome：窗口左上角的固定开关与导航按钮，以及侧栏收起后的 hover 浮层。
+ *
+ * 布局/状态在本文件；颜色只用 DSH 令牌，皮肤不参与。选择器只依赖 DSH 的
+ * 稳定标记（data-sidebar-*、data-slot、data-shell-*），DSH 升级时改这里。
+ */
+
+.ct-window-chrome {
+  position: fixed;
+  top: 11px;
+  left: 88px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  -webkit-app-region: no-drag;
+}
+
+/* Web 没有交通灯；全屏时 macOS 也会隐藏交通灯。 */
+html:not([data-platform='darwin']) .ct-window-chrome { left: 12px; }
+html[data-fullscreen] .ct-window-chrome { left: 12px; }
+
+/* Windows 的标题栏由系统 caption 行负责，本功能不接管。 */
+html[data-windows-titlebar] .ct-window-chrome { display: none; }
+
+.ct-window-chrome__button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--dsw-radius-sm);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+@media (hover: hover) {
+  .ct-window-chrome__button:hover:not(:disabled) {
+    background: var(--dsw-alias-interactive-bg-hover);
+    color: var(--dsw-alias-label-primary);
+  }
+}
+
+.ct-window-chrome__button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* 原生开关只留作焦点锚点，可见开关统一由 chrome 提供。 */
+html:not([data-windows-titlebar]) [data-sidebar-toggle] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 收起态的 leading seat（打开侧栏 + 新会话）由 chrome 接管。 */
+html:not([data-windows-titlebar]) [data-shell-leading] {
+  display: none !important;
+}
+
+/* chrome 占三个 28px 控件：收起态主内容顶部让位；抽屉里同样需要。 */
+html[data-platform='darwin'] [data-sidebar-collapsed]:not([data-sidebar-drawer]) {
+  --dsh-frame-leading-clearance: 196px !important;
+}
+
+html[data-platform='darwin'][data-fullscreen] [data-sidebar-collapsed]:not([data-sidebar-drawer]) {
+  --dsh-frame-leading-clearance: 120px !important;
+}
+
+html:not([data-windows-titlebar]) [data-sidebar-drawer] {
+  --dsh-frame-leading-clearance: 120px !important;
+}
+
+/* Web 没有 macOS 的 topStrip：给侧栏根留出 chrome 的顶栏高度，避免品牌行被
+   按钮压住。桌面端在 topStrip 里，本来就有 52px。44px = 按钮底 39 + 5px 呼吸。 */
+html:not([data-platform='darwin']):not([data-windows-titlebar]) [data-slot='sidebar'] > * {
+  padding-top: 44px !important;
+}
+
+/* SidebarRoot 展开态的第一行是「品牌行」（data-window-drag）：原生开关已被 chrome
+   隐藏、品牌按钮也被 workspace-browser 隐藏，Web 上这一行只剩 42px 空白，把
+   「新会话」推到按钮下方；桌面端的这一行紧贴 topStrip（交通灯行），不显眼。
+   用结构选择器而不是 [data-ct-sidebar-logo]：peek 浮层打开的侧栏会重新挂载，
+   workspace-browser 的标记还没跟上，按标记隐藏会漏掉这一行。 */
+html:not([data-platform='darwin']):not([data-windows-titlebar]) [data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] > :first-child[data-window-drag],
+html:not([data-platform='darwin']):not([data-windows-titlebar]) [data-ct-sidebar-peek] [data-slot='sidebar'] > * > :first-child[data-window-drag] {
+  display: none;
+}
+
+/* Web 没有 shell.leading：收起态（rail 已被 rail.js 压成 0 宽）主内容从窗口左缘
+   开始，header 标题行要让开 chrome 的三个按钮，和桌面端全屏时的 120px 一致。 */
+html:not([data-platform='darwin']):not([data-windows-titlebar]) [data-sidebar-collapsed]:not([data-sidebar-drawer]) {
+  --dsh-frame-leading-clearance: 120px !important;
+}
+
+/* 收起态列宽是 0，但原生列的 0.5px 右边框还会画出一条竖线（darwin 的收起态
+   本来就把边框去掉）。浮层打开时有阴影，同样不需要这条边。 */
+html:not([data-platform='darwin']):not([data-windows-titlebar]) [data-sidebar-collapsed]:not([data-sidebar-drawer]) :has(> [data-slot='sidebar']) {
+  border-right: none;
+}
+
+/* 收起态 hover 浮层：原生侧栏列临时脱离 grid，覆盖在主内容上；grid 轨道宽度
+   是 0（收起态已压平），所以列宽不变、主内容不位移。
+   不复制 SidebarRoot：由包装入口把 props 覆盖为展开态，DOM 只有一份。 */
+[data-sidebar-collapsed][data-ct-sidebar-peek]:not([data-sidebar-drawer]) :has(> [data-slot='sidebar']) {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 280px;
+  z-index: 60;
+  overflow: hidden;
+  box-shadow: var(--dsw-shadow-lv2);
+}
+
+/* 浮层盖在主内容上，必须是实底：桌面端的原生侧栏列是 vibrancy 玻璃（40% 透明），
+   透出下面的正文就没法看了。Web 端原生就是实色，这里统一成侧栏自己的填充色。
+   深色主题的 darwin 规则多一个属性选择器，所以这里也带上前缀平台条件。 */
+html:not([data-windows-titlebar]) [data-sidebar-collapsed][data-ct-sidebar-peek]:not([data-sidebar-drawer]) :has(> [data-slot='sidebar']) {
+  background: var(--dsw-specific-sidebar-fill);
+}

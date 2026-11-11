@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.7.0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建
+        run: pnpm build
+
+      - name: 校验 client 产物是自注册单文件
+        run: |
+          head -n 1 lib/client.js | grep -q '__ModuleLoader__'
+          grep -q "id: 'claude-code-mode'" lib/client.js
+
+      - name: 单元测试
+        run: node --test test/mcp-tool-search/*.test.mjs test/theme/*.test.mjs
