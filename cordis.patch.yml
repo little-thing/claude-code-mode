@@ -1,0 +1,27 @@
+# claude-code-mode bundle patch: mounts the host half and the client half.
+#
+# Optional config:
+#   skin:               skin id to mount (default: src/skins/<id>)
+#   mcpToolSearch:      MCP 工具按需加载（Claude ToolSearch 式）；默认关闭，下面显式打开
+#     enabled           true / false
+#     preload           永远可见的 MCP 工具名
+#     maxResults        单次搜索最多激活几个工具（1–20）
+#     maxActiveTools    0 = 不限制；非 0 时只限制新激活数量
+#     hint              是否写 system prompt 提示
+#
+# 功能开关（设置 → Claude Code）：偏好存在 $DSH_HOME/claude-code-mode/preferences.json，
+# 由宿主侧 preferences 路由读写、并注入首屏快照；默认全开，存「被关掉的集合」。
+# 桌面端用随机端口（--port 0），所以不用 localStorage：端口一变 origin 就变，开关会丢。
+#
+# 注意：模型路由必须支持中途 tool-addition，或不要声明 toolUpdate: addition-only。
+# 后者让 DSH 自动剥离 developer 消息，工具列表变更仍然生效；当前 MaaS 路由属于后者。
+- insert:
+    - id: claude-code-mode
+      name: 'claude-code-mode'
+      config:
+        skin: claude
+        mcpToolSearch:
+          enabled: true
+          preload: []
+          maxResults: 8
+          hint: true

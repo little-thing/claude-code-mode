@@ -1,0 +1,160 @@
+/* 设置页：沿用宿主 General 页的行形态（标题 + 说明 + 右对齐开关），
+ * 颜色/圆角只引用 DSH 令牌，不写具体色值或字体。 */
+
+.ct-fs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.ct-fs-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.ct-fs-group-title {
+  margin: 0;
+  padding: 12px 0 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.ct-fs-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+}
+
+.ct-fs-group > .ct-fs-row:last-child {
+  border-bottom: none;
+}
+
+.ct-fs-row-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ct-fs-row-label {
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--dsw-alias-label-primary);
+}
+
+.ct-fs-row-hint {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.ct-fs-switch {
+  flex: none;
+}
+
+.ct-fs-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 0 4px;
+}
+
+.ct-fs-reset {
+  appearance: none;
+  height: 32px;
+  padding: 0 14px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-md);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+
+.ct-fs-reset:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover, var(--dsw-alias-bg-layer-1));
+}
+
+.ct-fs-reset:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ct-fs-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* 插件身份：安装包名 + 构建时注入的版本号，弱化在页面最底部。 */
+.ct-fs-identity {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-secondary);
+  opacity: 0.8;
+}
+
+.ct-fs-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-state-error-primary);
+}
+
+/* 保存中的提示：14px 细线旋转环，与开关同高，颜色只走令牌。
+ * （之前是 6px 实心圆点，放在开关旁边像个孤立的黑点。） */
+.ct-fs-saving {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid var(--dsw-alias-border-l2);
+  border-top-color: var(--dsw-alias-label-secondary);
+  animation: ct-fs-spin 0.8s linear infinite;
+}
+
+/* 皮肤下拉：原生 select，保留系统箭头与系统弹层；尺寸与本页按钮一致。 */
+.ct-fs-select {
+  flex: none;
+  width: 168px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-md);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+  /* 不写死 color-scheme：继承 DSH 在 html 上设置的 dark/light，
+     原生下拉弹层才会跟主题一致，而不是跟随系统。 */
+}
+
+.ct-fs-select:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+
+@keyframes ct-fs-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ct-fs-saving {
+    animation-duration: 2.4s;
+  }
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "name": "mcp__rea__inspect_macho",
+    "description": "Inspect a Mach-O binary: headers, load commands, segments, symbols, entitlements, and code signatures."
+  },
+  {
+    "name": "mcp__rea__decompile",
+    "description": "Decompile a function or an entire binary into readable pseudo-code using the native decompiler."
+  },
+  {
+    "name": "mcp__rea__compare_web_captures",
+    "description": "Compare two browser captures, including DOM, network requests, console output, and screenshots."
+  },
+  {
+    "name": "mcp__rea__extract_apk",
+    "description": "Extract and inspect an Android APK: manifest, resources, native libraries, and DEX files."
+  },
+  {
+    "name": "mcp__rea__scan_firmware",
+    "description": "Scan a firmware image for filesystems, bootloaders, credentials, and embedded executables."
+  },
+  {
+    "name": "mcp__rea__localize_strings",
+    "description": "提取并分析应用内的本地化字符串，支持多语言资源文件。"
+  },
+  {
+    "name": "mcp__rea__analyze_js_bundle",
+    "description": "Analyze a JavaScript bundle: modules, source maps, packer signatures, and runtime behavior."
+  },
+  {
+    "name": "mcp__chrome__take_screenshot",
+    "description": "Take a screenshot of the current page in Chrome, with optional full-page capture."
+  },
+  {
+    "name": "mcp__chrome__navigate_page",
+    "description": "Navigate the browser to a URL and wait for the page to become ready."
+  },
+  {
+    "name": "mcp__docs__search_docs",
+    "description": "Search language and framework documentation for a specific API or concept."
+  }
+]
