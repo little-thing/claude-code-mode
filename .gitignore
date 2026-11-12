@@ -1,0 +1,12 @@
+node_modules/
+lib/
+.pnpm-store/
+.idea
+.DS_Store
+*.log
+
+# 只给本地 agent 的行为规范，不随仓库公开
+AGENTS.md
+
+# 本地临时草稿、方案草稿、调研笔记；不进仓库，仓库只留结果
+.dsh/

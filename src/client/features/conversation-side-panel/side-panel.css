@@ -1,0 +1,432 @@
+/* conversation-side-panel：Claude 式右侧面板与 header 入口条。
+ * 只引用 DSH 令牌，颜色/字体跟随皮肤；结构尺寸属于功能层。 */
+
+/* 右侧面板 ---------------------------------------------------------------- */
+
+/* 右栏控件统一尺度：pane 头、tab chip、图标按钮和入口菜单共用一套尺寸/
+ * 字重，和会话 header 右上的入口按钮（30px / 20px 图标）对齐。改一处即可
+ * 让整个右栏的按钮大小与文字粗细保持一致。 */
+.ct-sp-root {
+  --ct-sp-ui-font: 13px;
+  --ct-sp-ui-weight: 500;
+  --ct-sp-ui-icon: 16px;
+  --ct-sp-action-icon: 18px;
+  --ct-sp-ui-control: 30px;
+  border-left: 1px solid var(--dsw-alias-border-l2, rgba(20, 20, 19, 0.1));
+  box-sizing: border-box;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  background: var(--dsw-alias-bg-base, #faf9f7);
+  color: var(--dsw-alias-label-primary, #141413);
+  font-size: var(--ct-sp-ui-font);
+}
+
+/* 分屏容器自带左分割线；收起态没有内容，都不重复画。 */
+[data-ct-shell-rightbar] .ct-sp-root,
+.ct-sp-root[data-ct-sp-collapsed],
+.ct-sp-root[data-ct-sp-fullscreen] {
+  border-left: none;
+}
+
+.ct-sp-root[data-ct-sp-fullscreen] {
+  background: var(--dsw-alias-bg-base, #faf9f7);
+  bottom: 0;
+  height: 100vh;
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 100vw;
+  z-index: 40;
+}
+
+.ct-sp-split {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+.ct-sp-split-row {
+  flex-direction: row;
+}
+
+.ct-sp-split-column {
+  flex-direction: column;
+}
+
+.ct-sp-cell {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+}
+
+.ct-sp-divider {
+  background: transparent;
+  flex: none;
+  position: relative;
+  z-index: 2;
+}
+
+.ct-sp-divider-row {
+  cursor: col-resize;
+  margin: 0 -3px;
+  width: 7px;
+}
+
+.ct-sp-divider-column {
+  cursor: row-resize;
+  height: 7px;
+  margin: -3px 0;
+}
+
+.ct-sp-divider::after {
+  background: var(--dsw-alias-border-l2, rgba(20, 20, 19, 0.1));
+  content: '';
+  inset: 0;
+  position: absolute;
+}
+
+.ct-sp-divider-row::after {
+  left: 3px;
+  right: 3px;
+}
+
+.ct-sp-divider-column::after {
+  bottom: 3px;
+  top: 3px;
+}
+
+.ct-sp-divider:hover::after,
+.ct-sp-root[data-ct-sp-dragging] .ct-sp-divider:hover::after {
+  background: var(--dsw-alias-brand-primary, #4d6bfe);
+}
+
+.ct-sp-root[data-ct-sp-dragging] {
+  user-select: none;
+}
+
+.ct-sp-pane {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: var(--dsw-alias-bg-layer-1, #faf9f7);
+}
+
+.ct-sp-pane-head {
+  align-items: center;
+  border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(20, 20, 19, 0.1));
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  gap: 8px;
+  height: 43px;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 6px 8px;
+}
+
+.ct-sp-tabs {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 3px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ct-sp-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ct-sp-tab {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--dsw-alias-label-secondary, #5c5c58);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  font-size: var(--ct-sp-ui-font);
+  font-weight: var(--ct-sp-ui-weight);
+  gap: 6px;
+  height: var(--ct-sp-ui-control);
+  max-width: 200px;
+  padding: 0 9px;
+}
+
+.ct-sp-tab:hover {
+  background: var(--dsw-alias-bg-layer-2, rgba(20, 20, 19, 0.06));
+}
+
+.ct-sp-tab[data-active] {
+  background: var(--dsw-alias-bg-layer-2, rgba(20, 20, 19, 0.06));
+  color: var(--dsw-alias-label-primary, #141413);
+}
+
+.ct-sp-tab-icon {
+  align-items: center;
+  display: inline-flex;
+  flex: none;
+}
+
+.ct-sp-tab-icon svg {
+  height: var(--ct-sp-ui-icon);
+  width: var(--ct-sp-ui-icon);
+}
+
+.ct-sp-tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ct-sp-pane-actions {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+/* pane 最大化：右栏内只渲染这一块，其余 pane 隐藏。
+ * 会话壳内还会让整个右栏铺满壳、盖住会话主区，规则在
+ * workspace-browser.css 的 `.ct-shell:has(... [data-ct-sp-maximized])`。 */
+.ct-sp-root[data-ct-sp-maximized] .ct-sp-pane {
+  flex: 1 1 100%;
+}
+
+.ct-sp-pane-title {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 7px;
+  min-width: 0;
+}
+
+.ct-sp-pane-icon {
+  align-items: center;
+  color: var(--dsw-alias-label-secondary, #8a8a86);
+  display: inline-flex;
+  flex: none;
+}
+
+.ct-sp-pane-label {
+  color: var(--dsw-alias-label-primary, #141413);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ct-sp-pane-tools {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.ct-sp-icon-button {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--dsw-alias-label-secondary, #8a8a86);
+  cursor: pointer;
+  display: inline-flex;
+  height: var(--ct-sp-ui-control);
+  justify-content: center;
+  padding: 0;
+  width: var(--ct-sp-ui-control);
+}
+
+.ct-sp-icon-button svg {
+  height: var(--ct-sp-action-icon);
+  width: var(--ct-sp-action-icon);
+}
+
+.ct-sp-icon-button:hover {
+  background: var(--dsw-alias-bg-layer-2, rgba(20, 20, 19, 0.06));
+  color: var(--dsw-alias-label-primary, #141413);
+}
+
+.ct-sp-pane-body {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ct-sp-pane-body > * {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+.ct-sp-empty {
+  align-items: center;
+  color: var(--dsw-alias-label-secondary, #8a8a86);
+  display: flex;
+  flex: 1 1 0;
+  font-size: 13px;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+
+/* 会话 header 入口条 ------------------------------------------------------ */
+
+.ct-sp-entries {
+  align-items: center;
+  display: flex;
+  gap: 3px;
+}
+
+/* 新会话 hero 的入口条挂在 header corner 里：corner 自身向 header 的
+ * padding 里伸 16px，这里补回 8px，让入口和窗口右缘留出和标题行一致的呼吸。 */
+.ct-sp-entries[data-ct-sp-variant='blank'] {
+  margin-right: 8px;
+}
+
+.ct-sp-entry {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--dsw-alias-label-secondary, #5c5c58);
+  cursor: pointer;
+  display: inline-flex;
+  height: 30px;
+  justify-content: center;
+  padding: 0;
+  width: 30px;
+}
+
+/* hover / 选中沿用会话列表的墨水叠色逻辑：hover 加深底，选中更深，
+ * 选中项再 hover 时叠加到 selected-hover 一档。 */
+.ct-sp-entry:hover,
+.ct-sp-entry[data-open] {
+  background: var(--ct-wb-row-hover-bg, color-mix(in srgb, var(--dsw-alias-label-primary, #141413) 5%, transparent));
+  color: var(--dsw-alias-label-primary, #141413);
+}
+
+/* 对应面板已打开：按钮保持选中态（和左侧会话列表的选中语义一致）。 */
+.ct-sp-entry[data-active] {
+  background: var(--ct-wb-row-current-bg, color-mix(in srgb, var(--dsw-alias-label-primary, #141413) 10%, transparent));
+  color: var(--dsw-alias-label-primary, #141413);
+}
+
+/* 已选中再 hover：在选中底色上继续叠加，而不是被 hover 规则覆盖掉。 */
+.ct-sp-entry[data-active]:hover {
+  background: var(--ct-wb-row-current-hover-bg, color-mix(in srgb, var(--dsw-alias-label-primary, #141413) 13%, transparent));
+}
+
+.ct-sp-entry svg {
+  height: 20px;
+  width: 20px;
+}
+
+/* 入口菜单 ---------------------------------------------------------------- */
+
+/* 菜单是 portal 到 body 的，`.ct-sp-root` 的变量不在这里，尺寸直接写死，
+ * 但保持与右栏 pane 头同一套尺度：13px / 500 / 18px 图标 / 36px 行高。
+ *
+ * 抬升面统一用 bg-layer-1（浅色白 / 深色 #232324），和侧栏、会话 header 的菜单一致；
+ * bg-overlay 在深色主题是 #61666b 的中灰，浮在近黑的界面上会突兀。 */
+.ct-sp-menu {
+  background: var(--dsw-alias-bg-layer-1, #ffffff);
+  border: 1px solid var(--dsw-alias-border-l2, rgba(20, 20, 19, 0.1));
+  border-radius: 10px;
+  box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-1);
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  padding: 5px;
+  position: fixed;
+  z-index: 1000;
+}
+
+.ct-sp-menu-sep {
+  background: var(--dsw-alias-border-l1, rgba(20, 20, 19, 0.08));
+  flex: none;
+  height: 1px;
+  margin: 5px 2px;
+}
+
+.ct-sp-menu-count {
+  color: var(--dsw-alias-label-secondary, #8a8a86);
+  flex: none;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  padding-left: 8px;
+}
+
+.ct-sp-menu-check {
+  align-items: center;
+  color: var(--dsw-alias-brand-primary, #4d6bfe);
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  margin-left: 2px;
+  width: 14px;
+}
+
+.ct-sp-menu-item {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--dsw-alias-label-primary, #141413);
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  height: 36px;
+  padding: 0 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.ct-sp-menu-item:hover {
+  background: var(--dsw-alias-bg-layer-2, rgba(20, 20, 19, 0.06));
+}
+
+.ct-sp-menu-icon {
+  align-items: center;
+  color: var(--dsw-alias-label-secondary, #5c5c58);
+  display: inline-flex;
+  flex: none;
+}
+
+.ct-sp-menu-icon svg {
+  height: 18px;
+  width: 18px;
+}
+
+.ct-sp-menu-label {
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 原生右栏展开按钮停用：右栏入口统一走会话 header 工具条与「更多」，
+ * 右栏的展开由打开具体面板触发，不需要单独的展开按钮。 */
+[data-sidebar-right-expand] {
+  display: none !important;
+}
+
+/* 原生后台任务触发器由 index.js 按 slot 注册项 id 屏蔽（不用 CSS：
+ * 原生类名是 CSS Modules 哈希，且不同版本的 trigger 结构不同）。 */

@@ -1,0 +1,70 @@
+{
+  "name": "claude-code-mode",
+  "version": "0.3.2",
+  "description": "A session workspace for DeepSeek Harness, modeled on the Claude app — forked sessions in one tree, split view, and a right rail per session.",
+  "type": "module",
+  "main": "lib/host/index.js",
+  "exports": {
+    ".": "./lib/host/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json",
+    "./skin.json": "./skin.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "skin.json",
+    "README.md",
+    "README_ZH.md",
+    "THIRD_PARTY_NOTICES.md",
+    "LICENSE",
+    "docs/media/*.png",
+    "docs/media/hero.gif"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "prepack": "node build.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [],
+      "platform": "web"
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "claude",
+    "claude-code",
+    "workspace-browser",
+    "split-view",
+    "rewind",
+    "skin"
+  ],
+  "peerDependencies": {
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  },
+  "license": "MIT",
+  "engines": {
+    "dsh": ">=0.2.2-rc.1 <0.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/little-thing/claude-code-mode.git"
+  },
+  "homepage": "https://github.com/little-thing/claude-code-mode#readme",
+  "bugs": {
+    "url": "https://github.com/little-thing/claude-code-mode/issues"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "^1.8.0"
+  }
+}

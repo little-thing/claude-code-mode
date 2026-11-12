@@ -1,0 +1,66 @@
+name: Publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.7.0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # Trusted Publishing 需要 npm >= 11.5；Node 22 自带的是 10.x。
+      - name: 升级 npm
+        run: npm install -g npm@latest
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建
+        run: pnpm build
+
+      - name: 单元测试
+        run: node --test test/mcp-tool-search/*.test.mjs test/theme/*.test.mjs
+
+      - name: 检查版本是否已发布
+        id: check
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if npm view "claude-code-mode@$VERSION" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "claude-code-mode@$VERSION is already on npm, skipping publish."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "claude-code-mode@$VERSION is new, publishing."
+          fi
+
+      # 分阶段发布：CI 只把 tarball 放进暂存区，维护者用 2FA 审批后才对外可见。
+      # 审批：npm stage list / npm stage approve <id>，或 npmjs.com 包页面的 Staged 标签。
+      - name: 暂存到 npm
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          set +e
+          OUT=$(npm stage publish --provenance 2>&1)
+          CODE=$?
+          echo "$OUT"
+          if [ $CODE -ne 0 ] && echo "$OUT" | grep -q "Cannot stage previously published version"; then
+            echo "该版本已在暂存区，等待人工审批，本次跳过。"
+            exit 0
+          fi
+          exit $CODE

@@ -1,0 +1,148 @@
+/* image-preview — 结构样式：缩略图尺寸/位置、摘要行留白。
+ * 颜色、圆角、遮罩深浅都走令牌或在 skin 里定义；这里不写色值。
+ */
+
+.ct-image-preview-host {
+  display: contents;
+}
+
+/* 工具行缩略图：挂在行右侧，不参与 DisclosureRow 的点击区域。 */
+[data-chat-flow-kind='tool-call']:has(.ct-tool-image-thumb) {
+  position: relative;
+}
+
+[data-chat-flow-kind='tool-call']:has(.ct-tool-image-thumb) [data-disclosure-row] {
+  padding-right: 46px;
+}
+
+.ct-tool-image-thumb,
+.ct-turn-image-thumb {
+  display: block;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-sm);
+  background: var(--dsw-alias-bg-layer-1);
+  overflow: hidden;
+  cursor: zoom-in;
+}
+
+.ct-tool-image-thumb {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.ct-tool-image-thumb img,
+.ct-turn-image-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (hover: hover) {
+  .ct-tool-image-thumb:hover,
+  .ct-turn-image-thumb:hover {
+    border-color: var(--dsw-alias-brand-primary);
+  }
+}
+
+/* turn-process 折叠摘要行：本轮读到的图片缩略图。 */
+[data-chat-flow-kind='turn-process']:has(.ct-turn-image-thumbs) {
+  position: relative;
+}
+
+[data-chat-flow-kind='turn-process']:has(.ct-turn-image-thumbs) [data-turn-process] {
+  padding-right: 128px;
+}
+
+.ct-turn-image-thumbs {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ct-turn-image-more {
+  font-size: var(--dsh-content-font-size-secondary, 13px);
+  line-height: 1;
+  color: var(--dsw-alias-label-caption);
+}
+/* 工具分组行（「已读取图片」）：文件名 + 缩略图贴在行右侧。
+ * 这一行不是 slot，操作条由 installGroupImageThumbs 追加。 */
+[data-step-process]:has(> .ct-group-image-thumbs) {
+  position: relative;
+}
+
+.ct-group-image-thumbs {
+  position: absolute;
+  right: 0;
+  top: -4px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+}
+
+.ct-group-image-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--dsh-content-font-size-secondary, 13px);
+  color: var(--dsw-alias-label-secondary);
+  cursor: zoom-in;
+}
+
+@media (hover: hover) {
+  .ct-group-image-name:hover {
+    color: var(--dsw-alias-label-primary);
+    text-decoration: underline;
+  }
+}
+
+.ct-group-image-thumb {
+  display: block;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-sm);
+  background: var(--dsw-alias-bg-layer-1);
+  overflow: hidden;
+  cursor: zoom-in;
+}
+
+.ct-group-image-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (hover: hover) {
+  .ct-group-image-thumb:hover {
+    border-color: var(--dsw-alias-brand-primary);
+  }
+}
+
+.ct-group-image-more {
+  font-size: var(--dsh-content-font-size-secondary, 13px);
+  line-height: 1;
+  color: var(--dsw-alias-label-caption);
+}

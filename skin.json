@@ -1,0 +1,11 @@
+{
+  "id": "claude",
+  "name": "Claude",
+  "tagline": "Claude Code Desktop 皮肤",
+  "accent": "#d97757",
+  "bodyAttr": "data-ct-skin",
+  "package": "claude-code-mode",
+  "wiring": {
+    "id": "claude-code-mode"
+  }
+}
