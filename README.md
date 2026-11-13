@@ -21,6 +21,8 @@ DSH keeps every session as an independent row in a flat list. A fork looks like 
 
 claude-code-mode gives that list the structure of the Claude app: sessions remember where they came from, several can stay visible at once, and each carries its own tools. Everything DSH already does keeps working — the plugin changes how sessions are organised and presented, not what the host can do.
 
+**New in 0.3.3 — [safety guardrails](#safety-guardrails).** A built-in deterministic check that runs before any model-based review. Dangerous operations — deleting critical directories, `curl | bash`, destructive git commands, or overwriting protected paths — are never silently allowed: each match requires your confirmation. Details below; the [changelog](CHANGELOG.md) lists the full release.
+
 ## Features
 
 | | |
@@ -31,46 +33,27 @@ claude-code-mode gives that list the structure of the Claude app: sessions remem
 | **Search and new sessions**<br/>One palette searches sessions, projects, automations and actions. Unsent drafts survive switching sessions and follow you when you start a session in another project.<br/><img alt="Search" src="docs/media/search.png" width="100%"> | **Image preview**<br/>Every image inside a session — tool output, collapsed summaries, message links and delivered files — opens in the same full-size lightbox.<br/><img alt="Image preview" src="docs/media/image-preview.png" width="100%"> |
 | **Session actions**<br/>Rename in place, fork, archive, delete, copy the session ID, and browse every session in a full page with active and archived tabs.<br/><img alt="Session actions" src="docs/media/session-actions.png" width="100%"> | **Skins**<br/>A light and a dark skin modeled on the Claude app. The skin is a separate layer: switch it off and every feature keeps working in DSH's native look.<br/><img alt="Skin" src="docs/media/skin.png" width="100%"> |
 
+**Also**: a settings page with a switch per feature (sidebar, split view, session header, right rail, message rewind, image preview — all on by default) · background jobs with running and completed groups · window controls for the sidebar, back and forward · `mcp_tool_search`, which keeps MCP tools out of the model context until they are needed · a shimmer on sessions that are still running.
+
 ### Safety guardrails
 
-A deterministic check on the host side that **does not depend on any model judgement**. It runs before the model's own review: a hard-rule match is denied outright and never reaches an automatic allow, and no approval can override it.
+A built-in deterministic check that runs before any model-based review. It inspects shell commands and file writes, and it does not rely on model judgement: a match requires your confirmation instead of being silently allowed.
 
-Covered: deleting the home directory, the filesystem root, top-level directories, the working directory and its ancestors, drive roots, and system directories (as whole subtrees); delete targets built from command substitution or `xargs`; `find -delete`, `bash -c` inline scripts (including `-lc`/`-ec`), function bodies, `trap`, and `X=rm; $X -rf`; `curl | bash`; `git push --force`, `git clean -fdx`, `git filter-branch`, `rsync --delete`, infrastructure destroy; recursive permission changes on `~` or `/`; and writes to `~/.zshrc`, `~/.ssh`, `.git`, `.mcp.json` and similar protected paths — including bash redirection, `tee`, `cp`/`mv`/`install`/`ln`/`rsync` and `sed -i`.
+It covers dangerous operations: deleting critical directories (the home directory, the filesystem root, a top-level directory, or the working directory and its ancestors), `curl | bash`, destructive git commands (`git push --force`, `git clean -fdx`, `git filter-branch`), and writes to protected paths such as `~/.zshrc`, `~/.ssh`, `.git` and `.mcp.json`.
 
-A hard-rule hit is **not an unconditional refusal — it asks you once**, matching Claude Code's `requires explicit approval`. "Allow once" runs exactly that call; "Reject" is the only thing that stops it. With the `never` approval policy (unattended / `-p`) no prompt is shown and the call is refused outright.
+Variables are proved, not guessed. A delete target is blocked only when an empty value would land on `/` or a top-level directory: `rm -rf "$DIR"/*` is blocked, while `rm -rf "${DIR:?}"/*` is allowed because an empty value aborts the command.
 
-A command that fails shell parsing (for example an unbalanced quote) is not dangerous by itself: the real shell stops with a syntax error and runs nothing. Only when its text still carries a dangerous action — a delete command, a protected path, privilege escalation, an inline or remote script, `xargs`, a destructive git operation, or a recursive permission change — is the unparsed command treated as unverifiable and sent to you for approval; every other parse failure is left to DSH's own permission flow.
+A match asks you once for that call; with the unattended (`never`) approval policy it is refused without a prompt. Rejections are recorded with the command text redacted and shown as a read-only "recently blocked" list in **Settings → claude-code-mode → Safety guardrails**. Repeated attempts raise a hint there, never an automatic allow.
 
-**Variables are proved, not guessed**, matching Claude Code: a target is blocked only when it can be shown that an empty variable would land on `/` or a top-level directory.
+It is a command-and-write check, not a sandbox: code that a script or program runs internally, without issuing a shell command or a file write, is outside its view. DSH's sandbox remains the layer that constrains the process.
 
-| Form | Result |
-|---|---|
-| `rm -rf "${DIR:?}"/*` | allowed — an empty value aborts the shell, so the delete never runs |
-| `rm -rf "${DIR:-/tmp/build}"/*` | allowed — evaluated from the default |
-| `DIR=/tmp/build && rm -rf "$DIR"/*` | allowed — assigned in the same command |
-| `rm -rf ./$DIR/build` | allowed — the empty expansion is `./build` |
-| `rm -rf $DIR/build` | blocked — the empty expansion is `/build` |
-| `rm -rf "$DIR"/*` | blocked — the empty expansion is `/*` |
-| `rm -rf "$HOME"/*` | blocked — a glob under the home directory clears it |
-| `rm -rf "$(pwd)"` | blocked — command substitution output is unknown beforehand |
-
-Rejections are recorded (sanitized) and shown in **Settings → claude-code-mode** as a read-only "recently blocked" list. Five consecutive blocks raise a hint there — a hint only, never an automatic allow, because letting repeated attempts weaken a hard rule is exactly how a guard gets drained.
-
-**What it cannot see** (stated here rather than implied away):
-
-- Direct Node side effects inside a PTC `run_code` program never reach the tool pipeline, so this guard cannot see them; only the DSH sandbox covers that layer.
-- Interpreters that bypass bash, such as `python3 -c "…"` or `node -e "…"`: static analysis is meaningless there, so their inline scripts are not recursed into.
-- DSH's `auto` permission preset is fixed at full access with an approval prompt and has no sandbox fallback of its own; this guard is the only deterministic line at that setting.
-
-Configuration (optional):
+Optional configuration:
 
 ```yaml
 dangerGuard:
-  enabled: true          # on by default; false disables installation entirely
+  enabled: true          # on by default; false turns the guard off
   protectedPaths: []     # extra absolute paths to protect
 ```
-
-**Also**: a settings page with a switch per feature (sidebar, split view, session header, right rail, message rewind, image preview — all on by default) · background jobs with running and completed groups · window controls for the sidebar, back and forward · `mcp_tool_search`, which keeps MCP tools out of the model context until they are needed · a shimmer on sessions that are still running.
 
 ## Settings
 
@@ -98,6 +81,10 @@ Requires DSH **0.2.2-rc.1** or newer; older hosts are rejected at install time.
 |---|---|
 | `0.2.2-rc.1` and newer | Supported |
 | `< 0.2.2-rc.1` | Rejected at install time |
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) — 0.3.3 adds deterministic safety guardrails.
 
 ## License
 

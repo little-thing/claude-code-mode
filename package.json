@@ -16,6 +16,8 @@
     "skin.json",
     "README.md",
     "README_ZH.md",
+    "CHANGELOG.md",
+    "CHANGELOG_ZH.md",
     "THIRD_PARTY_NOTICES.md",
     "LICENSE",
     "docs/media/*.png",
