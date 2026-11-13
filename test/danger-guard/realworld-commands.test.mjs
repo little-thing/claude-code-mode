@@ -43,6 +43,8 @@ const shouldAllow = [
   'awk "{print $1}" file.txt | sort -u',
   'DIR=/tmp/x && rm -rf "${DIR:?}"/*',
   'rm -rf ./node_modules/.cache',
+  // 模型偶尔写坏的普通命令：shell 自己会语法报错，守卫不该抢在前面要审批。
+  `node -e 'const dir="/tmp/x"; const src=fs.readFileSync(dir+'/a.js','utf8')'`,
 ]
 
 // 必须拦住的操作。漏一条都是漏报。
@@ -69,6 +71,7 @@ const shouldBlock = [
   'find ~ -delete',
   'rm -rf "$(pwd)"',
   'sed -i "" "s/a/b/" ~/.zshrc',
+  'rm -rf "/tmp/x',   // 未闭合引号 + 删除：仍然要审批
 ]
 
 // 这几条用拼接写，避免这份文件自己被守卫当成危险命令扫描（它就是被扫描的对象）。

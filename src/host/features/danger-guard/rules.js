@@ -3,6 +3,9 @@
  * 设计原则来自 Claude Code 的关键路径检查：
  *  - 目标命中关键路径（家目录、根、工作目录及上级、系统盘）→ 拒绝，任何审批都不能放行；
  *  - 解析无法确定（未赋值变量、命令替换、`bash -c` 内联、多次 `cd`）→ 拒绝，而不是放行；
+ *  - 解析本身失败时，只有文本里出现危险动作才要求审批；单纯的引号不平衡在真实
+ *    shell 里就是语法错误、命令不会执行，一律拦截只会把模型写坏的普通命令
+ *    变成人工噪音（Claude 也只在危险删除分析上做这种升级）；
  *  - 保护文件（改写权限/启动配置/本插件偏好）→ 拒绝。
  *
  * 这里不做「模型意图」判断，那是 auto-review 的活。本模块只保证：
@@ -26,6 +29,30 @@ const MAX_FUNCTION_DEPTH = 4
 
 /** 删除类命令名，用于 alias 值与 shell 选项的旁路判定。 */
 const DANGEROUS_COMMAND_NAME = /\brm(?:dir)?\b|\bunlink\b|\bshred\b|\bdd\b|\bmkfs/u
+
+/**
+ * 解析失败时，只有文本里确实出现这些危险动作才升级为审批。
+ *
+ * 解析失败本身不说明危险：引号不平衡在真实 shell 里就是语法错误，命令不会
+ * 执行；一律要求审批只会让模型写坏的普通命令也变成人工噪音。每一项都对应
+ * `inspectShell` 里已有的一类判定，语义保持一致：删除类命令、受保护路径、
+ * 提权与命名空间切换、内联脚本、远程脚本、`xargs` 拼参、git 破坏性操作、
+ * 递归改权限。
+ */
+const PARSER_FAILURE_SIGNAL = new RegExp([
+  String.raw`\b(?:rm(?:dir)?|unlink|shred|del|erase)\b`,
+  String.raw`\bdd\b`,
+  String.raw`\bmkfs(?:\.[a-z0-9]+)?\b`,
+  String.raw`\bfind\b[^;&|\n]*-delete\b`,
+  String.raw`(?:^|[/\s"'=])(?:\.zshrc|\.zprofile|\.zshenv|\.bashrc|\.bash_profile|\.bash_login|\.profile|\.ssh|\.gnupg|\.aws|\.kube|\.docker|\.netrc|\.npmrc|\.gitconfig|\.mcp\.json|\.dsh|\.claude(?:\.json)?|\.git)(?:[/\s"']|$)`,
+  String.raw`\b(?:sudo|doas|runuser|pkexec)\b`,
+  String.raw`\bsu\s+-c\b`,
+  String.raw`\b(?:bash|sh|zsh|dash|ksh)\b[^;&|\n]*\s-[A-Za-z]*c[A-Za-z]*\b`,
+  String.raw`\|\s*(?:ba|z|da|k)?sh\b`,
+  String.raw`\bxargs\b`,
+  String.raw`\bgit\s+(?:push\b[^;&|\n]*(?:--force|-f\b)|clean\b[^;&|\n]*-[A-Za-z]*[fdx]|filter-branch)\b`,
+  String.raw`\bchmod\b[^;&|\n]*(?:-R|--recursive)\b[^;&|\n]*\b777\b|\bchmod\b[^;&|\n]*\b777\b[^;&|\n]*(?:-R|--recursive)\b`,
+].join('|'), 'u')
 
 /**
  * 函数定义：`f() { ... }` 或 `function f { ... }`。
@@ -442,6 +469,10 @@ export function inspectShell(command, env, depth = 0) {
   try {
     commands = parseCommands(command)
   } catch (error) {
+    // 解析失败本身不说明危险：未闭合的引号在真实 shell 里就是语法错误，
+    // 命令不会执行。只有文本里确实出现危险动作时，解析失败才意味着
+    // 「无法确认」——交给用户审批；否则放行，把判断留给外部权限流。
+    if (!PARSER_FAILURE_SIGNAL.test(text)) return null
     return deny('unparsed-shell', `无法解析的命令（${messageOf(error)}），无法确认实际动作`, command)
   }
   // 命令替换个数上限（Claude 的 tooManySubstitutions）。

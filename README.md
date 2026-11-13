@@ -39,6 +39,8 @@ Covered: deleting the home directory, the filesystem root, top-level directories
 
 A hard-rule hit is **not an unconditional refusal — it asks you once**, matching Claude Code's `requires explicit approval`. "Allow once" runs exactly that call; "Reject" is the only thing that stops it. With the `never` approval policy (unattended / `-p`) no prompt is shown and the call is refused outright.
 
+A command that fails shell parsing (for example an unbalanced quote) is not dangerous by itself: the real shell stops with a syntax error and runs nothing. Only when its text still carries a dangerous action — a delete command, a protected path, privilege escalation, an inline or remote script, `xargs`, a destructive git operation, or a recursive permission change — is the unparsed command treated as unverifiable and sent to you for approval; every other parse failure is left to DSH's own permission flow.
+
 **Variables are proved, not guessed**, matching Claude Code: a target is blocked only when it can be shown that an empty variable would land on `/` or a top-level directory.
 
 | Form | Result |

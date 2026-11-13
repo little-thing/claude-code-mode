@@ -162,6 +162,7 @@ Claude Code 用「硬编码判定 + 受保护路径 + 分类器」三层挡住�
 | 22 | 「最近被拦」面板 | Recently blocked 列表 | 无 | ✅ | 设置页「安全护栏」只读列表，数据来自审计路由 |
 | 23 | 附加工作目录 | 保护「工作目录 + `--add-dir` 的附加目录 + 它们的上级」 | 只有单个 `workspaceRoot` | ⬜ | **DSH 没有附加目录的概念**，无法等价实现；当前保护 cwd 及其所有上级 |
 | 24 | OS 沙箱兜底 | bubblewrap／seatbelt 限制文件与网络 | 依赖 DSH 沙箱；`auto` 预设下是 full access | ⬜ | DSH 的 `auto` 固定 full access，沙箱不是本插件能改的 |
+| 25 | 解析失败的命令 | 只在「危险删除分析无法完成」时升级为显式审批（`the shell may read it differently than it was parsed`）；普通命令照常走权限流 | 无 | ✅ | 引号不平衡本身不触发审批；只有文本里出现危险动作（删除类命令、受保护路径、提权、内联/远程脚本、`xargs`、破坏性 git、递归改权限）才按「无法确认」要授权。依据 Claude Code 2.1.322 的 `parseForSecurity` / `hasParserLexingDifferential` 与 `This requires explicit approval` 文案 |
 
 ### 变量语义
 
