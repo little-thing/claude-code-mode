@@ -24,6 +24,7 @@ import { originalOf } from './shared/cordis.js'
 import { installDangerGuard } from './features/danger-guard/index.js'
 import { installMcpToolSearch } from './features/mcp-tool-search/index.js'
 import { installPreferences, isFeatureEnabled, subscribePreferences } from './features/preferences/index.js'
+import { alignRewindEnd, rewindMessages } from './features/rewind/history.js'
 
 export const name = 'claude-code-mode'
 export const inject = ['sessionController', 'sessionQuery', 'webServer', 'sessions', 'agents', 'fs']
@@ -451,15 +452,19 @@ function createRewindManager(ctx) {
     session.deriveMessages = function deriveMessagesWithRewinds() {
       const records = activeRecords(session.id)
       if (records.length === 0) return original.call(session)
-      const out = []
-      for (const seq of session.surface.nodes) {
-        if (records.some((record) => seq >= record.anchorSeq && seq <= record.endSeq)) continue
-        const event = session.eventAt(seq)
-        if (event === undefined) continue
-        const message = session.deriveEventMessage(event)
-        if (message !== null) out.push(message)
+      try {
+        const out = rewindMessages({
+          nodes: session.surface.nodes,
+          eventOf: (seq) => session.eventAt(seq),
+          messageOf: (event) => session.deriveEventMessage(event),
+          records,
+        })
+        return out ?? original.call(session)
+      } catch (error) {
+        // 裁剪本身出错时退回未裁剪历史：宁可多带消息，也不能让整轮请求失败。
+        ctx.logger?.warn?.(`claude-code-mode: rewind derive failed: ${String(error?.message ?? error)}`)
+        return original.call(session)
       }
-      return out
     }
   }
 
@@ -618,7 +623,7 @@ function createRewindManager(ctx) {
     }
     const busy = await busySession(session)
     if (busy) return { ok: false, code: 'busy', message: 'session is running' }
-    const endSeq = events.at(-1)?.seq ?? anchorSeq
+    const endSeq = rewindEndSeq(events, anchorSeq)
     if (!onSurface(session, anchorSeq)) {
       return { ok: false, code: 'compaction', message: 'conversation context was compacted after this message' }
     }
@@ -657,7 +662,7 @@ function createRewindManager(ctx) {
     if (anchor === undefined || anchor.type !== 'user/message' || anchor.data?.source?.kind !== 'user') {
       return { ok: false, code: 'invalid-anchor', message: 'anchor is not a user message' }
     }
-    const endSeq = events.at(-1)?.seq ?? anchorSeq
+    const endSeq = rewindEndSeq(events, anchorSeq)
     if (!onSurface(session, anchorSeq)) {
       return { ok: false, code: 'compaction', message: 'conversation context was compacted after this message' }
     }
@@ -912,6 +917,18 @@ function isRecord(value) {
 
 function delay(milliseconds) {
   return new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds))
+}
+
+/**
+ * 回退区间的右端：默认取最后一个事件，但若区间跨过了尚未落盘结果的工具调用，
+ * 收缩到那次调用之前，避免主动切出一对残缺的调用/结果。
+ * @param {readonly any[]} events
+ * @param {number} anchorSeq
+ * @returns {number}
+ */
+function rewindEndSeq(events, anchorSeq) {
+  const raw = events.at(-1)?.seq ?? anchorSeq
+  return alignRewindEnd(events, anchorSeq, raw)
 }
 
 function lastTurnAtOrBefore(events, seq) {
