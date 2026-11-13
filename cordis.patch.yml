@@ -9,6 +9,10 @@
 #     maxActiveTools    0 = 不限制；非 0 时只限制新激活数量
 #     hint              是否写 system prompt 提示
 #
+#   dangerGuard:       危险操作守卫（确定性拦截，不依赖模型）
+#     enabled          true / false，默认开启
+#     protectedPaths   额外需要保护的绝对路径
+#
 # 功能开关（设置 → Claude Code）：偏好存在 $DSH_HOME/claude-code-mode/preferences.json，
 # 由宿主侧 preferences 路由读写、并注入首屏快照；默认全开，存「被关掉的集合」。
 # 桌面端用随机端口（--port 0），所以不用 localStorage：端口一变 origin 就变，开关会丢。

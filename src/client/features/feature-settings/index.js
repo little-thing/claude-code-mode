@@ -35,6 +35,10 @@ const SECTION_ORDER = 25
 const SECTION_ID = 'claude-code-mode'
 /** 等宿主触发的插件热重载的上限；等不到才回退整页刷新。 */
 const CLIENT_RELOAD_TIMEOUT_MS = 3000
+/** 安全护栏的只读审计路由。 */
+const AUDIT_ROUTE = '/claude-code-mode/danger-guard/audit'
+/** 面板里最多显示多少条。 */
+const AUDIT_ROWS = 8
 
 const DICTIONARIES = {
   zh: {
@@ -49,6 +53,8 @@ const DICTIONARIES = {
     featureSessionHeaderHint: '点击标题就地重命名，会话名旁的下拉放「更多」与「打开方式」。',
     featureSidePanel: '右侧面板',
     featureSidePanelHint: '会话右侧的自绘面板与标题栏工具入口；关闭后回到原生右栏。',
+    featureDangerGuard: '安全护栏',
+    featureDangerGuardHint: '一组确定性规则，先于模型判断挡在危险操作前面：命中就向你要一次授权，允许一次只执行这一次。关掉后不做任何判定。',
     featureRewind: '消息回退',
     featureRewindHint: '从任意用户消息退回到此处，并可选择一并还原这一段改过的文件。',
     featureImagePreview: '图片预览',
@@ -60,6 +66,15 @@ const DICTIONARIES = {
     reset: '恢复默认',
     resetHint: '功能开关保存后自动生效，不会刷新页面。',
     saveFailed: '保存失败，请重试。',
+    guardTitle: '安全护栏',
+    guardHint: '命中规则的操作会先向你要一次授权：允许一次只执行这一次，拒绝才不执行。判定在自动审查之前，自动审查不参与。',
+    guardOff: '守卫已关闭，不会拦截任何操作。',
+    guardEmpty: '还没有拦截记录。',
+    guardRefresh: '刷新',
+    guardLoading: '读取中…',
+    guardFailed: '读不到拦截记录。',
+    guardRule: '规则',
+    guardTime: '时间',
   },
   en: {
     nav: 'CodeMode',
@@ -73,10 +88,21 @@ const DICTIONARIES = {
     featureSessionHeaderHint: 'Click the title to rename in place; the dropdown beside the name holds "More" and "Open in".',
     featureSidePanel: 'Right rail',
     featureSidePanelHint: 'The Claude-style session rail and header tool entries; off restores the native rail.',
+    featureDangerGuard: 'Safety guardrails',
+    featureDangerGuardHint: 'Deterministic rules that stand in front of dangerous operations, ahead of any model judgement: a hit asks you once, and allow runs only that call. Off means no checks at all.',
     featureRewind: 'Message rewind',
     featureRewindHint: 'Rewind to any user message, optionally restoring the files that changed in that range.',
     featureImagePreview: 'Image preview',
     featureImagePreviewHint: 'One lightbox for every image in a session; off opens images in the right rail again.',
+    guardTitle: 'Dangerous operation guard',
+    guardHint: 'Operations that hit a rule ask you once: allow runs only that call, reject stops it. The check runs before auto review, which never takes part.',
+    guardOff: 'The guard is off and blocks nothing.',
+    guardEmpty: 'No blocked operations yet.',
+    guardRefresh: 'Refresh',
+    guardLoading: 'Loading…',
+    guardFailed: 'Could not read the blocked list.',
+    guardRule: 'Rule',
+    guardTime: 'Time',
     skinLabel: 'Skin',
     skinHint: 'Pick the palette and type; native mounts no skin and every feature keeps working. Takes effect immediately.',
     skinOptionClaude: 'Claude',
@@ -153,11 +179,80 @@ function SettingsPage({ t }) {
       }, t('reset')),
       h('p', { className: 'ct-fs-hint' }, t('resetHint')),
     ),
+    h(DangerGuardPanel, { t }),
     snapshot.error === 'save'
       ? h('p', { className: 'ct-fs-error', role: 'alert' }, t('saveFailed'))
       : null,
     // 设置导航叫 CodeMode（品牌），这里用安装包名 + 版本说明是哪个插件。
     h('p', { className: 'ct-fs-identity' }, `claude-code-mode v${PLUGIN_VERSION}`),
+  )
+}
+
+/**
+ * 安全护栏的「最近拦截」只读面板。
+ *
+ * 数据来自宿主的 `/claude-code-mode/danger-guard/audit`，只读，不提供放行入口：
+ * 这些拦截是确定性的，绕过它们应该改规则，而不是在面板上点一下。
+ * @param {{ t: (key: string) => string }} props
+ */
+function DangerGuardPanel({ t }) {
+  const [state, setState] = React.useState({ phase: 'loading', status: null, recent: [] })
+  // 开关关掉时守卫整个不装，审计路由也不存在：这时不该报「读不到」。
+  const [guardOn, setGuardOn] = React.useState(
+    () => !getPreferencesSnapshot().disabled.has('danger-guard'),
+  )
+  React.useEffect(() => subscribePreferences(() => {
+    setGuardOn(!getPreferencesSnapshot().disabled.has('danger-guard'))
+  }), [])
+  const load = React.useCallback(() => {
+    setState((prev) => ({ ...prev, phase: 'loading' }))
+    void fetch(AUDIT_ROUTE, { cache: 'no-store' })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
+      .then((data) => setState({
+        phase: 'ready',
+        status: data?.status ?? null,
+        recent: Array.isArray(data?.recent) ? data.recent : [],
+      }))
+      .catch(() => setState({ phase: 'failed', status: null, recent: [] }))
+  }, [])
+  React.useEffect(() => { load() }, [load])
+
+  const rows = state.recent.slice(-AUDIT_ROWS).reverse()
+  const alert = state.status?.alert ?? null
+
+  return h('section', { className: 'ct-fs-group', 'data-ct-fs-guard': 'panel' },
+    h('div', { className: 'ct-fs-guard-head' },
+      h('h3', { className: 'ct-fs-group-title' }, t('guardTitle')),
+      h('button', {
+        type: 'button',
+        className: 'ct-fs-guard-refresh',
+        onClick: load,
+        disabled: state.phase === 'loading',
+      }, t('guardRefresh')),
+    ),
+    h('p', { className: 'ct-fs-row-hint' }, t('guardHint')),
+    alert === null ? null : h('p', { className: 'ct-fs-guard-alert', role: 'alert' }, alert.message),
+    guardOn === false
+      ? h('p', { className: 'ct-fs-row-hint' }, t('guardOff'))
+      : state.phase === 'loading'
+      ? h('p', { className: 'ct-fs-row-hint' }, t('guardLoading'))
+      : state.phase === 'failed'
+        ? h('p', { className: 'ct-fs-error', role: 'alert' }, t('guardFailed'))
+        : rows.length === 0
+          ? h('p', { className: 'ct-fs-row-hint' }, t('guardEmpty'))
+          : h('ul', { className: 'ct-fs-guard-list' },
+            rows.map((row, index) => h('li', {
+              key: `${row.at}-${index}`,
+              className: 'ct-fs-guard-item',
+            },
+            h('span', { className: 'ct-fs-guard-time' }, String(row.at ?? '').slice(11, 19)),
+            h('span', { className: 'ct-fs-guard-rule' }, String(row.rule ?? '')),
+            h('code', {
+              className: 'ct-fs-guard-cmd',
+              title: String(row.command ?? row.path ?? row.detail ?? ''),
+            }, String(row.command ?? row.path ?? row.detail ?? '').slice(0, 400)),
+            )),
+          ),
   )
 }
 

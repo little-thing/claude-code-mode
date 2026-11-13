@@ -128,6 +128,103 @@ Claude Code 怎么做、DSH 现在怎么做、我们这个插件做到哪了。
 | 新会话入口条包进原生 header corner | blank 阶段 `conversation.session.header` 的 title/actions/utilities 全被 `hideChrome` 关掉，只有 corner 仍然渲染；就地复用 corner 不新增 header 行，也不改原生布局 | 包装 corner 注册项：先渲染原生组件（右栏开关 / 分屏关闭），再在会话 blank 时追加入口条；用 `cornerState.live` 防止 HMR 旧包装重复渲染；正常会话里追加部分渲染 `null` |
 | 空白会话不提供后台任务入口 | 后台任务天然绑定某个会话的运行记录；新会话窗口在用户看来还没有会话上下文，需求明确按「不支持」处理 | toolbar 的 `variant: 'blank'` 不渲染 jobs 菜单项、也不订阅该会话的花名册；等提交第一轮（blank=false）后随 utilities 入口条一起出现 |
 
+## 安全护栏
+
+Claude Code 用「硬编码判定 + 受保护路径 + 分类器」三层挡住危险操作，其中前两层是确定性的，分类器无权放行。
+本插件在 DSH 里补的是同一角色的确定性层：命中规则直接拒绝，审批与 auto-review 都翻不了案。
+
+判定口径对照本机 Claude Code 2.1.322（`~/.local/share/claude/versions/2.1.322`，Bun 单文件）里的
+错误消息与正则表，逐条对齐；对不上的地方在表里如实标出。
+
+| # | 能力 | Claude Code 行为 | DSH 现状 | 插件状态 | 备注 |
+|---|---|---|---|---|---|
+| 1 | 关键路径删除 | 目标是 `/`、`~`、工作目录及其上级、盘根、挂载盘时**要求显式批准**；任何 allow 规则与 hook 都批不了 | 无 | ✅ | 判定走 `tools/pre-execute`（链首）；命中后向用户要一次 `allowed-once`，批准只对那次调用有效。`tools.guard` 保持单调兜底，只放行刚被批准的那一次；目标先解析真实路径，符号链接绕不过 |
+| 2 | 系统目录子树 | `rm -rf /etc/passwd`、`/System/Library` 与删 `/etc` 同等对待 | 无 | ✅ | 系统目录按整棵子树判；`/tmp` → `/private/tmp` 等临时目录例外 |
+| 3 | 顶层目录 | 根下一层路径算关键路径 | 无 | ✅ | `/^\/[^/]*$/` |
+| 4 | 挂载盘范围 | `/Volumes` 0–2 层、`/mnt/x` 与 `/mnt/c/x`、`/media` 0–3 层 | 无 | ✅ | 用它的范围，不是简单的单层前缀 |
+| 5 | 变量正向证明 | 只拦「能证明变量为空时会落到 `/` 或顶层目录」的目标；`${VAR:?}`、`${VAR:-def}`、同命令内赋值都放行 | 无 | ✅ | 见下「变量语义」；这是误报率的关键 |
+| 6 | 命令替换输出 | 目标来自 `$(...)`／反引号时拒绝 | 无 | ✅ | 执行前拿不到值，无法证明安全 |
+| 7 | 命令替换数量 | 超过阈值时按「无法分析」拒绝（`tooManySubstitutions`） | 无 | ✅ | 阈值 8；另有嵌套深度上限 8 |
+| 8 | 提权与命名空间 | `sudo`/`unshare`/`nsenter`/`pkexec`/`runuser`/`su` 之后继续判；带值选项（`-u root`、`-t 1`）要跳过 | 无 | ✅ | 之前漏跳过带值选项，命令名被吃掉导致整段判定失效 |
+| 9 | 内联脚本 | `bash -c`／`-lc`／`-ec` 的脚本文本要再判一次 | 无 | ✅ | 只对 shell 递归；`python -c`／`node -e` 不递归（见差异表） |
+| 10 | 函数定义 | 函数体在调用时执行，要判到 | 无 | ✅ | 取 `{ ... }` 内容递归，嵌套上限 4 |
+| 11 | 变量赋值成命令 | `X=rm; $X -rf ~` 这类 | 无 | ✅ | 判定为 `rm-via-variable` |
+| 12 | `trap`／`eval` | 字符串里的删除命令 | 无 | ✅ | `trap "$(rm -rf ~)"` 拦；`eval` 的内容递归判 |
+| 13 | `IFS` 改写 | 出现 `IFS` 赋值时按解析不可信处理 | 无 | ✅ | 涉及删除才拦，普通 `IFS=/ && ls` 放行 |
+| 14 | shell 选项 | `set -o`／`bash -o` 改变展开行为（`dotglob`/`globstar`/`nullglob`/`noglob`/`posix`…）时保守 | 无 | ✅ | bash 收到合法字符集之外的短选项也拦 |
+| 15 | 超长／控制字符 | 命令过长的字符集歧义按「无法静态验证」处理 | 无 | ✅ | 阈值 8000 字符 |
+| 16 | Windows／Git Bash 路径 | 纯反斜杠是盘根；盘符根与 Windows 系统目录直接拒 | 无 | ✅ | macOS 上同样判，宁可保守 |
+| 17 | PowerShell | `Remove-Item` 系列打盘根、`$env:USERPROFILE`、`$HOME` 直接拒 | 无 | ✅ | `pwsh` 走独立判定，不与 POSIX 规则混用 |
+| 18 | 受保护路径 | `.git`、`~/.zshrc`、`~/.ssh`、`.mcp.json` 等即使在工作目录内也绕不过 | 无 | ✅ | 同时覆盖 bash 重定向、`tee`/`cp`/`mv`/`install`/`ln`/`rsync`、`sed -i` |
+| 19 | 强制推送与历史改写 | 分类器处理（`soft_deny`） | 无 | ✅ | 本插件写死：`git push --force`、`git clean -fdx`、`git filter-branch`、`rsync --delete`、`terraform/pulumi/cdk destroy`、`curl \| bash`、`dd of=/dev/*`、`mkfs` |
+| 20 | 分类器替代审批 | 两阶段 transcript classifier | DSH 有 `dsh-experimental-auto-review` | ➖ | 本插件排在它前面：命中即短路，它不会被调用；未命中才交给它 |
+| 21 | 连续拒绝后降级 | 分类器拒绝超限时 `falling back to prompting`；连续拒绝提示看 transcript；`denyInsteadOfPrompting` 下 `ending the turn` | 无 | 🟡 | 连续 5 次拦截在审计状态里置位、写 warn 日志、在设置页面板给出提示。**不改变拦截行为**——硬规则按次数放行等于把守卫耗穿；Claude 的熔断也是「回落到人工/停止」而不是放行 |
+| 22 | 「最近被拦」面板 | Recently blocked 列表 | 无 | ✅ | 设置页「安全护栏」只读列表，数据来自审计路由 |
+| 23 | 附加工作目录 | 保护「工作目录 + `--add-dir` 的附加目录 + 它们的上级」 | 只有单个 `workspaceRoot` | ⬜ | **DSH 没有附加目录的概念**，无法等价实现；当前保护 cwd 及其所有上级 |
+| 24 | OS 沙箱兜底 | bubblewrap／seatbelt 限制文件与网络 | 依赖 DSH 沙箱；`auto` 预设下是 full access | ⬜ | DSH 的 `auto` 固定 full access，沙箱不是本插件能改的 |
+
+### 变量语义
+
+| 写法 | 结果 | 理由 |
+|---|---|---|
+| `rm -rf "${DIR:?}"/*` | 放行 | 为空时 shell 报错退出，删除不会执行 |
+| `rm -rf "${DIR:-/tmp/build}"/*` | 放行 | 用默认值求值 |
+| `DIR=/tmp/build && rm -rf "$DIR"/*` | 放行 | 同命令内赋值可确定 |
+| `rm -rf ./$DIR/build` | 放行 | 空展开是 `./build` |
+| `rm -rf $DIR/build` | 拦 | 空展开是 `/build`，顶层目录 |
+| `rm -rf "$DIR"/*` | 拦 | 空展开是 `/*`，根下通配 |
+| `rm -rf "$HOME"/*` | 拦 | 家目录下的通配等于清空家目录 |
+| `rm -rf "$(pwd)"` | 拦 | 命令替换的输出执行前拿不到 |
+
+### 开关
+
+设置页「功能」分组里有「安全护栏」开关（默认开启，与其它功能一样只存「被关掉的集合」）。
+
+| 状态 | 行为 |
+|---|---|
+| 开（默认） | 安装守卫：`tools.guard` + `tools/pre-execute` + 三个 fs 瀑布，命中规则要授权 |
+| 关 | **完全卸载**：不判定、不记审计、不拦任何操作，审计路由也一并撤掉 |
+
+部署方还可以用 `dangerGuard.enabled: false` 硬关掉，两者是「与」关系。
+
+关掉开关有个坑值得记：`stabilize` 走 `queueMicrotask` 重排链首，如果「别人注册 pre-execute → 排队重排」与「关掉开关 → 卸载」落在同一 tick，排队的重排会在卸载之后执行、把监听器装回来——表现是路由已经没了、命令却仍然被拦。现在用 `disposed` 标志挡住，并有回归测试。
+
+### 批准语义
+
+命中硬规则不是「无条件拒绝」，而是**要一次显式授权**，与 Claude 的 `requires explicit approval` 对齐：
+
+| 情形 | 结果 |
+|---|---|
+| 审批策略 `ask`，用户点「允许一次」 | `allowed-once`，**只执行这一次**，不持久、不跨调用 |
+| 审批策略 `ask`，用户点「拒绝」 | 拒绝，审计记 `refused` |
+| 审批策略 `never`（无人值守 / `-p`） | 不弹窗，自动拒绝（fail closed），并在理由里说明本会话不询问审批与后续出路 |
+| 没有审批服务 / 请求抛错 | 按拒绝处理（fail closed） |
+| 连续拦截 5 次 | 只在设置页提示，**不放行** |
+
+`tools.guard` 的位置不变：它是审批之后的最后一道闸，只放行刚刚被 `allowed-once` 批准的那一次调用。
+
+### 为什么不为守卫单独做弹窗
+
+never 策略的语义是「需要审批的一律拒绝」，不是「什么都批准」——它比默认模式更严格。
+守卫在 never 下拒绝与用户设置一致，不是缺陷。
+
+做一个绕过 approval 服务的自有弹窗技术上可行，但代价是：丢掉 DSH 的审批审计、
+自己处理超时与取消、而且一旦开了「插件可以无视用户不要问我」的先例，后面每个
+插件都能这么干。无人值守场景（-p、CI）本来也没人点，弹了同样超时。
+
+所以选的是「拒绝 + 讲清出路」：理由里写明本会话不询问审批、可换会话或手动执行，
+并提示模型不要重复尝试同一条命令——否则它会换个写法反复重试，刷出一屏拦截记录。
+
+### 与 Claude Code 的差异
+
+| 差异 | 原因 |
+|---|---|
+| 比它多拦一批非 `rm` 操作（`git push --force`、`git clean`、`curl \| bash`、基础设施 destroy…） | Claude 把这些交给分类器与沙箱；DSH 的 `auto` 预设没有沙箱兜底，只能把确定性边界写死 |
+| 不对 `python -c`／`node -e` 的内联脚本递归判定 | 这两种解释器里几乎可以做任何事，静态判定没有意义；强行解析只会把「脚本里恰好出现 `rm` 字样」的正常命令误判成危险操作。Claude 覆盖的也是 shell `-c` |
+| `$HOME`／`$PWD`／`$TMPDIR` 用实际值展开，不做空展开 | 这些变量在真实环境里几乎不会为空，空展开会让 `rm -rf "$HOME"/x` 这类正常操作被误拦 |
+| 连续拒绝只告警、不结束本轮 | DSH 的工具管线没有「结束 turn」的原语；Claude 的 `ending the turn` 落在它的 agent loop 里。本插件用审计告警 + 设置页提示表达同一件事，拦截行为不变 |
+| 不做跨会话的「永久放行」授权 | Claude 有 permission rules 让用户显式加白；本插件没有规则层，绕过方式只能是改配置或改代码 |
+
 ## 复现记录
 
 ### 深色下问答卡与输入框贴平背景（2026-11-10）

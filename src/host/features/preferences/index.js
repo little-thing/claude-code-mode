@@ -47,6 +47,45 @@ const MAX_BODY_BYTES = 64 * 1024
 /** 首屏注入的全局名，客户端 core/preferences.js 读同一个名字。 */
 const GLOBAL_NAME = '__CT_PREFS__'
 
+/**
+ * 当前生效的偏好。宿主侧的功能（例如安全护栏）要按开关装卸，
+ * 所以这里保留一份模块级引用，并提供同步查询与变更订阅。
+ * @type {{ disabled: string[] }}
+ */
+let activeState = { disabled: [] }
+/** @type {Set<() => void>} */
+const preferenceListeners = new Set()
+
+/**
+ * 某个开关是否处于开启状态（默认开启：只看「被关掉的集合」）。
+ * @param {string} id
+ * @returns {boolean}
+ */
+export function isFeatureEnabled(id) {
+  return !activeState.disabled.includes(id)
+}
+
+/**
+ * 订阅偏好变更。保存成功后同步调用，宿主功能据此重新装卸。
+ * @param {() => void} listener
+ * @returns {() => void} 退订
+ */
+export function subscribePreferences(listener) {
+  preferenceListeners.add(listener)
+  return () => { preferenceListeners.delete(listener) }
+}
+
+/** 通知所有订阅者。回调抛错不影响其它订阅者与保存流程。 */
+function notifyPreferences() {
+  for (const listener of preferenceListeners) {
+    try {
+      listener()
+    } catch {
+      /* 单个订阅者失败不影响其它订阅者 */
+    }
+  }
+}
+
 const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, PUT, OPTIONS',
@@ -65,6 +104,7 @@ export function installPreferences(ctx) {
 
   /** @type {{ disabled: string[], skin: string, updatedAt: number }} */
   const state = loadState(path)
+  activeState = state
   /** 写盘串行：并发 PUT 不会互相覆盖临时文件。 */
   let writeChain = Promise.resolve()
 
@@ -86,6 +126,8 @@ export function installPreferences(ctx) {
     state.disabled = [...record.disabled]
     state.skin = record.skin
     state.updatedAt = record.updatedAt
+    // 宿主功能（安全护栏）按开关装卸：先通知，再落盘。
+    notifyPreferences()
     const run = writeChain.then(async () => {
       await mkdir(dirname(path), { recursive: true })
       const temporary = `${path}.${process.pid}.tmp`

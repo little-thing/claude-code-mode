@@ -158,3 +158,72 @@
     animation-duration: 2.4s;
   }
 }
+
+/* 危险操作守卫的「最近拦截」只读面板。 */
+.ct-fs-guard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ct-fs-guard-refresh {
+  border: 1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.12));
+  background: transparent;
+  color: inherit;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ct-fs-guard-refresh:disabled { cursor: default; opacity: 0.6; }
+
+.ct-fs-guard-alert {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(214, 158, 46, 0.12);
+  color: var(--dsw-alias-label-primary, inherit);
+  font-size: 12px;
+}
+
+.ct-fs-guard-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* 记录会一直累积，不能让它把设置页撑高。 */
+  max-height: 220px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ct-fs-guard-item {
+  display: grid;
+  grid-template-columns: 62px 118px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.ct-fs-guard-time { opacity: 0.6; font-variant-numeric: tabular-nums; }
+.ct-fs-guard-rule { opacity: 0.8; overflow-wrap: anywhere; }
+.ct-fs-guard-cmd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  display: block;
+  /* 命令可能很长：换行显示，保证能看全；整体高度由列表的 max-height 控制。
+     这里不用横向滚动——macOS 的 overlay 滚动条在表格行里像一条多余的分隔线。 */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: visible;
+}
+
+.ct-fs-guard-list::-webkit-scrollbar { width: 6px; }
+.ct-fs-guard-list::-webkit-scrollbar-track { background: transparent; }
+.ct-fs-guard-list::-webkit-scrollbar-thumb {
+  background: var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.2));
+  border-radius: 3px;
+}

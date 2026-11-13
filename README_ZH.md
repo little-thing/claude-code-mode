@@ -5,7 +5,6 @@
 **为 DeepSeek Harness 打造的会话工作区，界面参照 Claude 应用。**
 
 <a href="https://www.npmjs.com/package/claude-code-mode"><img alt="npm version" src="https://img.shields.io/npm/v/claude-code-mode" /></a>
-<a href="https://github.com/little-thing/claude-code-mode/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/little-thing/claude-code-mode/actions/workflows/ci.yml/badge.svg" /></a>
 <a href="https://github.com/little-thing/claude-code-mode/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/little-thing/claude-code-mode" /></a>
 <a href="https://opensource.org/licenses/MIT"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg" /></a>
 <a href="https://www.npmjs.com/package/@deepseek-ai/dsh?activeTab=versions"><img alt="DSH 0.2.2-rc.1+" src="https://img.shields.io/badge/DSH-0.2.2--rc.1%2B-4d6bfe" /></a>
@@ -34,6 +33,43 @@ claude-code-mode 把这份列表换成 Claude 应用那样的结构：会话保�
 
 **还有**：设置页里每个功能一个开关（侧栏、分屏、会话 header、右栏、消息回退、图片预览，默认全开）· 后台任务按运行中和已完成分区 · 侧栏开关与前进/后退的窗口控件 · `mcp_tool_search` 让 MCP 工具在需要时才进入模型上下文 · 运行中的会话带扫光。
 
+### 安全护栏
+
+宿主侧的一层确定性检查，**不依赖任何模型的判断**。它在模型自动审查之前生效：命中硬规则就直接拒绝，不会进入自动放行，任何审批也翻不了案。
+
+拦截范围：删除家目录、根目录、顶层目录、工作目录及其上级、磁盘卷根；命令替换或被 `xargs` 拼参的删除目标；`find -delete`、`bash -c` 内联脚本、`curl | bash`；`git push --force`、`git clean -fdx`、`git filter-branch`；递归改 `~` 或 `/` 的权限；写入 `~/.zshrc`、`~/.ssh`、`.git`、`.mcp.json` 等受保护路径。
+
+命中规则时**不是直接拒绝，而是向你要一次明确授权**（和 Claude Code 的 `requires explicit approval` 一致）：点「允许一次」就执行这一次，点「拒绝」才真的不执行。无人值守（审批策略 `never`）时不弹窗、直接拒绝。
+
+**变量按「正向证明」判**，和 Claude Code 一致：只有能证明「变量为空时会落到 `/` 或顶层目录」才拦。
+
+| 写法 | 结果 |
+|---|---|
+| `rm -rf "${DIR:?}"/*` | 放行 —— 为空会让 shell 中止，删除不会执行 |
+| `rm -rf "${DIR:-/tmp/build}"/*` | 放行 —— 用默认值求值 |
+| `DIR=/tmp/build && rm -rf "$DIR"/*` | 放行 —— 同命令内赋值可确定 |
+| `rm -rf ./$DIR/build` | 放行 —— 空展开是 `./build`，安全 |
+| `rm -rf $DIR/build` | 拦 —— 空展开是 `/build`，顶层目录 |
+| `rm -rf "$DIR"/*` | 拦 —— 空展开是 `/*`，根下通配 |
+| `rm -rf "$HOME"/*` | 拦 —— 家目录下的通配等于清空家目录 |
+| `rm -rf "$(pwd)"` | 拦 —— 命令替换的输出执行前拿不到 |
+
+拒绝理由、层级和命令原文（已脱敏）都会被记录，并在 **设置 → claude-code-mode** 的「安全护栏」里以只读的「最近拦截」展示。连续拦截 5 次会在那里给出提示（只是提示，不会因此放行——硬规则按次数放行等于把守卫耗穿）。
+
+**拦不到的地方**（写在这里，而不是让人误以为全覆盖）：
+
+- PTC `run_code` 程序里的直接 Node 副作用不经过工具管线，本守卫看不到；这一层只能靠 DSH 的沙箱。
+- 用解释器绕开 bash 的写法，例如 `python3 -c "…"`、`node -e "…"`：静态判定没有意义，本守卫不递归这些内联脚本。
+- DSH 的 `auto` 权限预设固定是「完全访问 + 询问」，本身没有沙箱兜底；本守卫是那一档里唯一的确定性防线。
+
+配置（可选）：
+
+```yaml
+dangerGuard:
+  enabled: true          # 默认开启；false 完全不安装
+  protectedPaths: []     # 额外需要保护的绝对路径
+```
+
 ## 设置
 
 每个功能都能在 **设置 → claude-code-mode** 里单独关掉。开关按用户看到的部分分组 —— 侧栏、分屏、会话 header、右栏、消息回退、图片预览 —— 一个开关可以覆盖几项相关行为。关掉之后，那部分界面交还给 DSH。皮肤选择器也在同一处，可以选 Claude 皮肤或 DSH 原生观感。
@@ -54,37 +90,12 @@ dsh plugin --profile web add claude-code-mode@latest
 
 需要 DSH **0.2.2-rc.1** 或更高版本，更低版本会在安装时被拒绝。
 
-<details>
-<summary><b>从源码安装</b></summary>
-
-```bash
-git clone https://github.com/little-thing/claude-code-mode.git
-cd claude-code-mode
-pnpm install && pnpm build
-dsh plugin --profile web add file:$PWD
-```
-
-</details>
-
 ## 兼容性
 
 | DSH 版本 | 状态 |
 |---|---|
 | `0.2.2-rc.1` 及更新 | 支持 |
 | `< 0.2.2-rc.1` | 安装时拒绝 |
-
-## 开发
-
-<details>
-<summary><b>构建与测试</b></summary>
-
-```bash
-pnpm install
-pnpm build
-node --test test/mcp-tool-search/*.test.mjs test/theme/*.test.mjs
-```
-
-</details>
 
 ## License
 

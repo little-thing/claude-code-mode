@@ -21,8 +21,9 @@ import { homedir } from 'node:os'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 
 import { originalOf } from './shared/cordis.js'
+import { installDangerGuard } from './features/danger-guard/index.js'
 import { installMcpToolSearch } from './features/mcp-tool-search/index.js'
-import { installPreferences } from './features/preferences/index.js'
+import { installPreferences, isFeatureEnabled, subscribePreferences } from './features/preferences/index.js'
 
 export const name = 'claude-code-mode'
 export const inject = ['sessionController', 'sessionQuery', 'webServer', 'sessions', 'agents', 'fs']
@@ -69,6 +70,37 @@ export function apply(ctx, config = {}) {
 
   // 功能开关偏好：宿主持久化 + 首屏注入；客户端 apply 时读快照决定装哪些功能。
   ctx.effect(() => installPreferences(ctx), 'claude-code-mode preferences')
+
+  // 安全护栏：确定性拦截，不依赖任何模型判断，任何审批都翻不了案。
+  // 只影响「会被判成危险」的命令/写入，正常读写不受影响；安装失败不拖垮宿主插件。
+  // 守卫可以整体关掉：配置里 `dangerGuard.enabled: false`，或设置页的开关。
+  // 两者是「与」关系——配置是部署方的硬开关，设置页是使用者自己的选择。
+  ctx.inject(['tools'], (inner) => {
+    inner.effect(() => {
+      let dispose = installIfEnabled()
+      const unsubscribe = subscribePreferences(() => {
+        const on = isFeatureEnabled('danger-guard')
+        inner.logger?.info?.(`claude-code-mode: danger-guard 开关变化，enabled=${on}`)
+        dispose()
+        dispose = installIfEnabled()
+      })
+      return () => {
+        unsubscribe()
+        dispose()
+      }
+
+      function installIfEnabled() {
+        if (config.dangerGuard?.enabled === false) return () => {}
+        if (!isFeatureEnabled('danger-guard')) return () => {}
+        try {
+          return installDangerGuard(inner, config.dangerGuard)
+        } catch (error) {
+          inner.logger?.warn?.(`claude-code-mode: danger-guard install failed: ${String(error)}`)
+          return () => {}
+        }
+      }
+    }, 'claude-code-mode danger-guard')
+  })
 
   // MCP 按需加载：宿主能力，和皮肤/客户端无关；tools/systemPrompt 不在就静默跳过。
   ctx.inject(['tools', 'systemPrompt'], (inner) => {

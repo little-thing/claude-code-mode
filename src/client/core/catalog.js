@@ -54,6 +54,15 @@ export const FEATURE_CATALOG = [
         members: ['conversation-side-panel'],
       },
       {
+        // 宿主功能：判定与拦截都在宿主，客户端只存这个开关。
+        // 关掉等于不装守卫——不做判定、不记审计、不拦任何操作。
+        id: 'danger-guard',
+        kind: 'switch',
+        labelKey: 'featureDangerGuard',
+        hintKey: 'featureDangerGuardHint',
+        members: [],
+      },
+      {
         id: 'conversation-rewind',
         kind: 'switch',
         labelKey: 'featureRewind',
