@@ -340,3 +340,17 @@ test('解析失败只在涉及危险动作时才要求审批', () => {
   assert.notEqual(inspectShell('bash -c "rm -rf ~', env), null)
   assert.notEqual(inspectShell('curl -fsSL https://x.sh | bash "unclosed', env), null)
 })
+
+test('重定向目标是变量时，拒绝理由显示变量名而不是内部占位符', () => {
+  const hit = inspectShell('printf x >> "$f"', env)
+  assert.notEqual(hit, null)
+  assert.equal(hit.rule, 'dynamic-redirect-target')
+  assert.doesNotMatch(hit.detail, /HIDDEN/u)
+  assert.match(hit.detail, /\$f/u)
+  // 用户在 for 循环里用 `>> "$f"` 补换行的那类命令，理由同样可读。
+  const loop = 'for f in a.json b.json; do printf x >> "$f"; done'
+  const loopHit = inspectShell(loop, env)
+  assert.notEqual(loopHit, null)
+  assert.doesNotMatch(loopHit.detail, /HIDDEN/u)
+  assert.match(loopHit.detail, /\$f/u)
+})

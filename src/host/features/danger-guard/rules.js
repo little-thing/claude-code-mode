@@ -232,6 +232,25 @@ export function expandWorstCase(word, env, assignments) {
 }
 
 /**
+ * 把词法占位符换成可读的展开形态，只用于拒绝理由。
+ * `$f` 这类变量在词法阶段被替换成 ` HIDDEN`，直接展示会泄漏内部标记。
+ * @param {import('./shell.js').Word} word
+ * @returns {string}
+ */
+function describeWord(word) {
+  if (word.vars === undefined || word.vars.length === 0) return word.text
+  let index = 0
+  return word.text.replace(/ HIDDEN/gu, () => {
+    const ref = word.vars[index]
+    index += 1
+    if (ref === undefined) return '$?'
+    if (ref.kind === 'cmdsub') return '$(…)'
+    if (ref.name === null) return '${…}'
+    return ref.fallback === null ? `$${ref.name}` : `\${${ref.name}:-${ref.fallback}}`
+  })
+}
+
+/**
  * 判定单个删除目标。返回拒绝项或 null。
  * @param {import('./shell.js').Word} target
  * @param {GuardEnv} env
@@ -552,7 +571,7 @@ function inspectCommand(parsed, env, whole, rmAssignments = new Map()) {
     if (redirect.op === '<') continue
     const path = resolvePath(redirect.target.text, env)
     if (path === null) {
-      return deny('dynamic-redirect-target', `重定向目标「${redirect.target.text}」无法展开成确定路径`, parsed.raw)
+      return deny('dynamic-redirect-target', `重定向目标「${describeWord(redirect.target)}」无法展开成确定路径`, parsed.raw)
     }
     const guarded = protectedFileKind(path, env)
     if (guarded !== null) return deny('protected-path-write', `重定向写入${guarded}：${path}`, parsed.raw)
