@@ -11,6 +11,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Blocked reasons show variable names clearly instead of an internal
   placeholder.
 
+### Fixed
+
+- MCP tool search no longer fails every turn with `'get' on proxy: property
+  'dispose' is a read-only and non-configurable data property ...`. The wrapped
+  tool set is now a shape-preserving proxy, so deferred MCP tools stay out of
+  the first request and `mcp_tool_search` stays callable.
+
 ## [0.3.3] — 2026-11-13
 
 The first public release that ships the safety guardrails.

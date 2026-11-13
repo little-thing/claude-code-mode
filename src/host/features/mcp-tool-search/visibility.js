@@ -135,22 +135,37 @@ export class VisibilityStore {
     // 快照：同一个 step 内 catalog refresh 不能让隐藏工具“漏”进来。
     const managed = this.catalog.nameSnapshot()
 
-    return Object.freeze({
-      dispose: () => toolSet.dispose(),
-      view(scope) {
-        const visible = toolSet.view(scope)
-        if (scope !== agent || visible.size === 0) return visible
+    // 保形包装：只覆盖 view()，其余成员原样透传。
+    // 不能返回 Object.freeze({ dispose, view }) —— ResolvedToolSet 不止这两个成员，
+    // MCP client 的工具同步会遍历其它成员，缺一个就整条同步失败（mcp-rea 因此
+    // fiberPhase=failed 并反复重连、重启 MCP 子进程，最终拖垮宿主 ctx.subprocess，
+    // 表现成所有 bash/ripgrep 的 `spawn EBADF`）。
+    const wrappedView = (scope) => {
+      const visible = toolSet.view(scope)
+      if (scope !== agent || visible.size === 0) return visible
 
-        let changed = false
-        const kept = []
-        for (const [name, definition] of visible) {
-          if (managed.has(name) && !state.active.has(name)) {
-            changed = true
-            continue
-          }
-          kept.push([name, definition])
+      let changed = false
+      const kept = []
+      for (const [name, definition] of visible) {
+        if (managed.has(name) && !state.active.has(name)) {
+          changed = true
+          continue
         }
-        return changed ? new Map(kept) : visible
+        kept.push([name, definition])
+      }
+      return changed ? new Map(kept) : visible
+    }
+
+    return new Proxy(toolSet, {
+      get(target, property, receiver) {
+        // Proxy 不变式：目标上的 non-configurable + non-writable 数据属性，
+        // get 必须原样返回同一个值，否则语言层直接抛 TypeError
+        // （ResolvedToolSet 的 dispose 就是这种属性）。
+        const descriptor = Object.getOwnPropertyDescriptor(target, property)
+        const invariant = descriptor !== undefined && descriptor.configurable === false && descriptor.writable === false
+        if (property === 'view') return invariant ? Reflect.get(target, property, receiver) : wrappedView
+        // 不 bind：返回新函数同样会改变属性身份，且会让 this 指向失真。
+        return Reflect.get(target, property, receiver)
       },
     })
   }

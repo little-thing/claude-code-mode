@@ -112,10 +112,20 @@ export function installMcpToolSearch(ctx, rawConfig = {}) {
   const hadOwnResolve = Object.hasOwn(service, 'resolve')
   const previousResolve = service.resolve
   const wrappedResolve = async function resolve(context) {
-    const toolSet = await Reflect.apply(originalResolve, this, arguments)
-    const agent = context?.agent
-    if (agent === undefined || agent === null || toolSet === undefined) return toolSet
-    return visibility.wrapToolSet(agent, toolSet)
+    // 用背后的原始实例当 this：调用方拿到的 ctx.tools 可能是 Cordis 视图/Proxy，
+    // 原始 resolve 若读取 this 上的私有字段，用 Proxy 当 this 会直接抛 TypeError。
+    const toolSet = await Reflect.apply(originalResolve, service, arguments)
+    try {
+      const agent = context?.agent
+      if (agent === undefined || agent === null || toolSet === undefined) return toolSet
+      return visibility.wrapToolSet(agent, toolSet)
+    } catch (error) {
+      // 过滤失败必须 fail-open：tools.resolve() 一抛错，MCP client 的工具同步就会失败
+      // 并反复重连（每次重连都要重新 spawn MCP 子进程），进而拖垮宿主的子进程能力。
+      // 宁可这一步多带几个 MCP 工具，也不能让 resolve 失败。
+      ctx.logger?.warn?.(`[mcp-tool-search] wrapToolSet failed: ${String(error)}`)
+      return toolSet
+    }
   }
 
   service.resolve = wrappedResolve

@@ -9,6 +9,13 @@
 
 - 拦截理由中的变量名显示更清楚，不再出现内部占位符。
 
+### 修复
+
+- MCP 工具按需加载不再让每一轮都报
+  `'get' on proxy: property 'dispose' is a read-only and non-configurable data
+  property ...` 而整轮失败。被包装的工具集合改为保形代理，被延迟的 MCP 工具
+  依然不进首轮请求，`mcp_tool_search` 保持可用。
+
 ## [0.3.3] — 2026-11-13
 
 首个公开发布「安全护栏」的版本。

@@ -132,6 +132,29 @@ test('wrapper keeps dispose semantics and returns the original set when no MCP t
   assert.equal(storeFor(createCatalog([])).wrapToolSet(agent, empty), empty)
 })
 
+test('wrapper tolerates a non-configurable dispose member', () => {
+  const agent = createAgent()
+  const visible = new Map(MCP_TOOLS.map((name) => [name, { name }]))
+  // DSH 的 ResolvedToolSet 把 dispose 定义成 non-configurable + non-writable 的
+  // 数据属性。Proxy 的 get 必须原样返回它，否则语言层会直接抛
+  // "'get' on proxy: property 'dispose' is a read-only and non-configurable
+  // data property ..."，整轮会话报错。
+  const toolSet = { view: () => visible }
+  Object.defineProperty(toolSet, 'dispose', {
+    value: () => {},
+    enumerable: false,
+    writable: false,
+    configurable: false,
+  })
+
+  const wrapped = storeFor(createCatalog()).wrapToolSet(agent, toolSet)
+
+  assert.doesNotThrow(() => wrapped.dispose)
+  assert.equal(typeof wrapped.dispose, 'function')
+  // view 仍然被包装：未激活的 MCP 工具不进入可见集合。
+  assert.equal(wrapped.view(agent).size, 0)
+})
+
 test('states are isolated per agent and cleared on delete', () => {
   const first = createAgent('session-a')
   const second = createAgent('session-b')
