@@ -27,6 +27,8 @@
     "build": "node build.mjs",
     "watch": "node build.mjs --watch",
     "version": "node build.mjs",
+    "release": "node release.mjs",
+    "release:check": "node release.mjs --check",
     "prepack": "node build.mjs"
   },
   "dsh": {
