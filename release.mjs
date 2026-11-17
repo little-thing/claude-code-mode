@@ -242,7 +242,9 @@ function promote(entry, version, date) {
   const lines = entry.text.split('\n')
   const head = lines.slice(0, found.start + 1)
   const tail = lines.slice(found.end)
-  const block = ['', `## [${version}] — ${date}`, '', ...entry.body.split('\n'), '']
+  // 「未发布」标题后通常紧跟一个空行，去掉它，避免新小节标题下出现两个空行。
+  const body = entry.body.replace(/^\s+/, '')
+  const block = ['', `## [${version}] — ${date}`, '', ...body.split('\n'), '']
   const merged = [...head, ...block, ...tail].join('\n')
   return merged.endsWith('\n') ? merged : `${merged}\n`
 }
@@ -329,7 +331,9 @@ function main() {
   if (options.dryRun) {
     console.log(`[release] 演练：${current} → ${target}（${date}）`)
     for (const preview of previews) {
-      console.log(`\n--- ${preview.file} ---\n## [${target}] — ${date}\n${preview.body}`)
+      // 打印提升并合并后的真实小节，格式问题（多余空行等）在演练时就看得见。
+      const merged = sectionOfVersion(preview.promoted, target)
+      console.log(`\n--- ${preview.file} ---\n## [${target}] — ${date}\n${merged === null ? preview.body : merged.body}`)
     }
     console.log('\n[release] 演练结束：没有改动任何文件。去掉 --dry-run 即正式发版。')
     return
