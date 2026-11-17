@@ -6,6 +6,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.3.5] — 2026-11-17
+
+### Fixed
+
+- The sidebar's project and session list is visible again on DSH 0.2.2 and
+  later. 0.2.2 moved the panel navigation and the workspace seat into a
+  scrolling grid inside the sidebar; the plugin kept inserting its own middle
+  scroller on the same level, which packed both grid items into a single
+  4×8 px cell and left the tree 0 px wide — it kept rendering, just invisibly.
+  The adapter now tells the two shells apart by structure, leaves the shipped
+  grid alone and keeps the native scrolling; a collapsed sidebar is never
+  restructured.
+- The New Session row keeps its label and shortcut again: the button is looked
+  up through the `sidebar.session.action` slot and fills its row instead of
+  shrinking down to its own padding.
+
+## [0.3.4] — 2026-11-13
+
 ### Changed
 
 - Blocked reasons show variable names clearly instead of an internal

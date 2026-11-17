@@ -84,7 +84,8 @@ Requires DSH **0.2.2-rc.1** or newer; older hosts are rejected at install time.
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) — 0.3.3 adds deterministic safety guardrails.
+See [CHANGELOG.md](CHANGELOG.md) — 0.3.5 restores the sidebar on DSH 0.2.2 and
+later; 0.3.3 added the deterministic safety guardrails.
 
 ## License
 

@@ -84,7 +84,8 @@ dsh plugin --profile web add claude-code-mode@latest
 
 ## 更新日志
 
-见 [CHANGELOG_ZH.md](CHANGELOG_ZH.md) —— 0.3.3 新增确定性安全护栏。
+见 [CHANGELOG_ZH.md](CHANGELOG_ZH.md) —— 0.3.5 修复 DSH 0.2.2 及更高版本上的侧栏；
+0.3.3 新增确定性安全护栏。
 
 ## License
 
