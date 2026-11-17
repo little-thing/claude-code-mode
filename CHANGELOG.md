@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.3.6] — 2026-11-17
+
+### Changed
+
+- Releases now ship their own changelog. `node release.mjs` refuses to bump the
+  version until both `CHANGELOG.md` and `CHANGELOG_ZH.md` describe the release,
+  so a published package always tells users what changed. The missing 0.3.4 and
+  0.3.5 records are included in this package as well.
+
 ## [0.3.5] — 2026-11-17
 
 ### Fixed
