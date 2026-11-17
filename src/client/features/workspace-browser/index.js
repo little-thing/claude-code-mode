@@ -116,9 +116,24 @@ const SIDEBAR_MARK_ATTRIBUTES = [
   'data-ct-sidebar-scroll',
   'data-ct-sidebar-scrollarea',
   'data-ct-sidebar-scrollregion',
+  'data-ct-sidebar-native-scroll',
   'data-ct-sidebar-scrolled',
   'data-ct-sidebar-collapsed',
 ]
+
+/**
+ * 新建会话入口。0.2.2 起按钮外面多了一层 `sidebar.session.action` HOC 槽
+ * （`root > .newSessionRow > [data-slot] > button`），老壳是 `root > button`。
+ * 两种结构都只认按钮本身：插件 CSS 按按钮排版（左对齐、透明底、36px）。
+ * @param {Element} root 侧栏根
+ * @returns {Element | null} 新建按钮，找不到时为 null
+ */
+function findNewSessionButton(root) {
+  const slot = root.querySelector('[data-slot="sidebar.session.action"]')
+  const nested = slot === null ? null : slot.querySelector('button')
+  if (nested !== null) return nested
+  return root.querySelector(':scope > button')
+}
 
 function normalizeSectionView(value) {
   const source = value !== null && typeof value === 'object' ? value : {}
@@ -910,15 +925,26 @@ function installSidebarShell() {
     // 只有本插件的工作区列表已经渲染时才接管原生壳；插件没跑（slot 注册失败/
     // 服务缺失）时侧栏保持原生，符合“功能可摘除”。
     if (seat === null || seat.querySelector('.ct-wb') === null) return
-    // 根：从座位向上找侧栏列；跳过我们自己的中间滚动容器（它也有按钮）。
-    let root = seat.parentElement
-    while (
-      root !== null
-      && root !== document.body
-      && (root.hasAttribute('data-ct-sidebar-scroll')
-        || ![...root.children].some((child) => child.tagName === 'BUTTON' || child.tagName === 'NAV' || child.hasAttribute('data-ct-sidebar-scroll')))
-    ) {
-      root = root.parentElement
+    // 根：优先认「带折叠按钮的那一层」。0.2.2 把面板列表收进 .scrollArea，
+    // 旧判据（第一个有按钮/导航子项的祖先）会停在 .scrollArea 上，
+    // 于是 root 标记、顶部 header、底部 foot 全部打错位。
+    let root = null
+    for (let node = seat.parentElement; node !== null && node !== document.body; node = node.parentElement) {
+      if (node.querySelector('[data-sidebar-toggle]') !== null) {
+        root = node
+        break
+      }
+    }
+    if (root === null) {
+      root = seat.parentElement
+      while (
+        root !== null
+        && root !== document.body
+        && (root.hasAttribute('data-ct-sidebar-scroll')
+          || ![...root.children].some((child) => child.tagName === 'BUTTON' || child.tagName === 'NAV' || child.hasAttribute('data-ct-sidebar-scroll')))
+      ) {
+        root = root.parentElement
+      }
     }
     if (root === null || root === document.body) return
     for (const other of document.querySelectorAll('[data-ct-sidebar-root]')) {
@@ -929,10 +955,30 @@ function installSidebarShell() {
     }
     root.setAttribute('data-ct-sidebar-root', '')
 
+    // 折叠态（rail）由 DSH 自己收成图标列：DSH 这时不渲染 wide 的滚动元素，
+    // 也不显示工作区座位。插件只保留标记，绝不搬节点——否则会把 React 拥有的
+    // 节点收进插件容器，展开时再搬回来，React 侧可能对不上而被判为节点丢失。
+    const collapsed = root.getBoundingClientRect().width < SIDEBAR_COLLAPSED_WIDTH
+
     // 重新查找时兼容「已包装」与「被 React 移回 root」两种位置。
-    const newSession = root.querySelector('[data-ct-sidebar-new]') ?? root.querySelector(':scope > button')
+    const newSession = root.querySelector('[data-ct-sidebar-new]') ?? findNewSessionButton(root)
     const panels = root.querySelector('[data-ct-sidebar-panels]') ?? root.querySelector(':scope > nav')
     const region = seat.parentElement
+
+    // 新旧侧栏壳：老壳的面板导航与工作区座位直接挂在侧栏根下；0.2.2 起 DSH 把
+    // 两者收进 .scrollRegion > .scrollArea 网格，由这个网格自己滚动。新壳不能再插
+    // 插件的中间滚动容器——把两个网格项塞进同一个 4px×8px 的格子会让整列宽度归零
+    // （会话树照常渲染，只是 0 宽不可见，侧栏看起来是空的）。
+    // 只看「座位所在容器是不是 root」：不看瞬时属性（折叠动画期间 DSH 会摘掉滚动
+    // 元素的标记）也不看 overflow，避免动画中途误判成老壳、把 React 拥有的节点
+    // 搬进插件容器后卡在老壳分支。
+    const regionHome = region === null || region.parentElement === null
+      ? null
+      : (region.parentElement.hasAttribute('data-ct-sidebar-scroll') ? region.parentElement.parentElement : region.parentElement)
+    const nativeScroller = !collapsed && regionHome !== null && regionHome !== root
+    const nativeScrollport = nativeScroller
+      ? (seat.closest('[data-sidebar-scrollport]') ?? root.querySelector('[data-sidebar-scrollport]'))
+      : null
     // 品牌行：桌面端折叠态的品牌图标也走 sidebar.brand.mark slot，但它嵌在
     // 折叠按钮里（rail 图标）。不能把它的容器（macOS 的 topStrip）当成品牌行，
     // 否则 topStrip 会被打上 logo 标记，展开态按「删掉 logo」的样式被隐藏，
@@ -945,21 +991,34 @@ function installSidebarShell() {
     while (foot !== null && foot.parentElement !== root) foot = foot.parentElement
     if (foot === root) foot = null
 
-    // 中间滚动容器：header 与底部在它外面，滚动区域天然排除头尾。
+    // 中间滚动容器：老壳（原生没有 scrollport）才需要插件自己造一个，
+    // 把「新建 → 面板 → 工作区」收进一个可滚动列。新壳由 DSH 的 .scrollArea
+    // 滚动，插件只盯滚动沿，不搬节点、不插层。
     let wrapper = root.querySelector(':scope > [data-ct-sidebar-scroll]')
-    if (wrapper === null) {
-      wrapper = document.createElement('div')
-      wrapper.setAttribute('data-ct-sidebar-scroll', '')
-      if (logoRow !== null && logoRow.parentElement === root) logoRow.after(wrapper)
-      else root.prepend(wrapper)
+    if (collapsed) {
+      // 收起态只清理可能残留的中间容器，不改其余结构。
+      if (wrapper !== null) {
+        restoreWrapper()
+        wrapper = null
+      }
+    } else if (nativeScroller) {
+      if (wrapper !== null) restoreWrapper()
+      if (nativeScrollport !== null) attachScrollWrapper(nativeScrollport)
+    } else {
+      if (wrapper === null) {
+        wrapper = document.createElement('div')
+        wrapper.setAttribute('data-ct-sidebar-scroll', '')
+        if (logoRow !== null && logoRow.parentElement === root) logoRow.after(wrapper)
+        else root.prepend(wrapper)
+      }
+      const desired = [newSession, panels, region].filter((node) => node !== null && node !== undefined)
+      const children = [...wrapper.children]
+      const ordered = desired.length === children.length && desired.every((node, index) => children[index] === node)
+      if (!ordered) {
+        for (const node of desired) wrapper.appendChild(node)
+      }
+      attachScrollWrapper(wrapper)
     }
-    const desired = [newSession, panels, region].filter((node) => node !== null && node !== undefined)
-    const children = [...wrapper.children]
-    const ordered = desired.length === children.length && desired.every((node, index) => children[index] === node)
-    if (!ordered) {
-      for (const node of desired) wrapper.appendChild(node)
-    }
-    attachScrollWrapper(wrapper)
 
     if (newSession !== null && newSession !== undefined) newSession.setAttribute('data-ct-sidebar-new', '')
     if (panels !== null && panels !== undefined) panels.setAttribute('data-ct-sidebar-panels', '')
@@ -975,14 +1034,10 @@ function installSidebarShell() {
       if (toggle !== undefined) toggle.setAttribute('data-ct-sidebar-toggle', '')
       logoRow.setAttribute('data-ct-sidebar-logo', toggle === undefined ? 'empty' : 'toggle')
     }
-    // 新版 DSH：scrollArea 自己滚动，需要一起解除。
-    const scrollArea = root.querySelector('[data-sidebar-scrollport]')
-    if (scrollArea !== null) {
-      scrollArea.setAttribute('data-ct-sidebar-scrollarea', '')
-      scrollArea.parentElement?.setAttribute('data-ct-sidebar-scrollregion', '')
-    }
+    // 布局模式标记：CSS 用它区分「插件自带滚动容器」与「原生网格滚动」两套尺寸规则。
+    root.toggleAttribute('data-ct-sidebar-native-scroll', nativeScroller)
     // 折叠态（56px rail）保持原生布局；展开态才用中间滚动容器和统一行样式。
-    root.setAttribute('data-ct-sidebar-collapsed', root.getBoundingClientRect().width < SIDEBAR_COLLAPSED_WIDTH ? 'true' : 'false')
+    root.setAttribute('data-ct-sidebar-collapsed', collapsed ? 'true' : 'false')
     if (root !== observedRoot) {
       resize?.disconnect()
       observedRoot = root

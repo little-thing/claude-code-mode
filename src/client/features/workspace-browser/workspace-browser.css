@@ -1551,6 +1551,22 @@
   overflow: visible;
 }
 
+/* 0.2.2 新壳：中间列由 DSH 的 .scrollArea 网格自己滚动，插件不插中间容器。
+ * 工作区座位是它的网格项（第 2 列 / 第 4 行），高度按内容走，整列一起滚动。 */
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'][data-ct-sidebar-native-scroll] .ct-wb {
+  height: auto;
+  min-height: 0;
+}
+
+/* 新壳的新建按钮外面多了一层 .newSessionRow + HOC 槽：行自己的边距保留，
+ * 标记打在按钮上。按钮是 inline-size 容器，flex 项宽度必须由行给出，
+ * 否则按内容收缩成 0 宽（只剩内边距），标题和快捷键全部看不见。 */
+[data-ct-sidebar-root][data-ct-sidebar-collapsed='false'][data-ct-sidebar-native-scroll] [data-ct-sidebar-new] {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
 [data-ct-sidebar-root][data-ct-sidebar-collapsed='false'] .ct-wb {
   height: auto;
   min-height: 0;
