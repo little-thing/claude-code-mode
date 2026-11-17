@@ -72,6 +72,12 @@ function run(command, args) {
   return typeof output === 'string' ? output.trim() : ''
 }
 
+/** 不裁剪输出的执行：git status --porcelain 每行前两列是状态码，裁剪会破坏解析。 */
+function runRaw(command, args) {
+  const output = execFileSync(command, args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+  return typeof output === 'string' ? output : ''
+}
+
 function tryRun(command, args) {
   try {
     return { ok: true, out: run(command, args) }
@@ -241,9 +247,26 @@ function promote(entry, version, date) {
   return merged.endsWith('\n') ? merged : `${merged}\n`
 }
 
+/**
+ * 发版只允许两份更新日志有未提交改动（写日志 → 直接发版，一次提交带走）。
+ * 其它任何改动都要求先提交，避免把功能改动混进版本提交。
+ */
 function ensureCleanWorktree() {
-  const dirty = run('git', ['status', '--porcelain'])
-  if (dirty !== '') fail('发版中止：工作区不干净。功能改动先提交，发版只包含版本号与日志。', dirty)
+  const allowed = new Set(CHANGELOGS.map((item) => item.file))
+  const dirty = runRaw('git', ['status', '--porcelain'])
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .filter((line) => {
+      // porcelain 前两列是状态码，之后是路径（重命名会带 " -> "）
+      const paths = line.slice(3).split(' -> ')
+      return !paths.every((item) => allowed.has(item.trim().replace(/^"|"$/g, '')))
+    })
+  if (dirty.length > 0) {
+    fail(
+      '发版中止：除更新日志外，工作区还有未提交的改动。功能改动先提交，发版只包含版本号与日志。',
+      dirty.join('\n'),
+    )
+  }
 }
 
 function ensureBranch() {
