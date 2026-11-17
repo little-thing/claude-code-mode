@@ -8,8 +8,8 @@
  * 「必须写日志」是硬校验：发版前把这一版的内容写进 CHANGELOG.md 的
  * `## Unreleased` 与 CHANGELOG_ZH.md 的 `## 未发布`，脚本把两段提升成
  * `## [x.y.z] — YYYY-MM-DD`。两份里任何一份为空都直接中止，不发版本。
- * 同样的校验以 `--check` 暴露给 CI（.github/workflows/publish.yml），
- * 绕过脚本手动 bump 也会在发版流水线上被拦住。
+ * 发版只在本地走这个脚本：CI 不做这层校验，也不替我们补日志。
+ * `--check` 只给本地自检用（例如核对某个已发布版本是否真的写了日志）。
  *
  * 用法：
  *   node release.mjs                  # patch 发版：0.3.5 → 0.3.6
@@ -17,7 +17,7 @@
  *   node release.mjs --version 1.0.0  # 指定版本
  *   node release.mjs --dry-run        # 只演练：升到哪个版本、日志会长什么样
  *   node release.mjs --no-push        # 本地提交并打 tag，不推送
- *   node release.mjs --check          # 只校验当前 package.json 版本已有日志（CI 用）
+ *   node release.mjs --check          # 只校验当前版本已有日志（本地自检）
  *
  * 约定：
  *   - 只允许在 main 上发版，且工作区必须干净（功能改动先提交）。
@@ -48,7 +48,7 @@ const USAGE = `发版脚本（日志先行）
   node release.mjs --version 1.0.0  指定版本
   node release.mjs --dry-run        只演练，不写文件
   node release.mjs --no-push        本地提交打 tag，不推送
-  node release.mjs --check          校验当前版本已有日志（CI 用）
+  node release.mjs --check          校验当前版本已有日志（本地自检）
 
 发版前把这一版的内容写进：
   CHANGELOG.md    ## Unreleased
