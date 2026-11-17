@@ -37,6 +37,11 @@ jobs:
       - name: 单元测试
         run: node --test test/mcp-tool-search/*.test.mjs test/theme/*.test.mjs
 
+      # 发版必须有更新日志：两份日志里都要有当前版本的 `## [x.y.z]` 小节且非空。
+      # 绕过 release.mjs 手动 bump 也会在这里被拦下。
+      - name: 检查更新日志
+        run: node release.mjs --check
+
       - name: 检查版本是否已发布
         id: check
         run: |
