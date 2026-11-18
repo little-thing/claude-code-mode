@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,7 +20,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: 安装依赖
@@ -32,4 +35,31 @@ jobs:
           grep -q "id: 'claude-code-mode'" lib/client.js
 
       - name: 单元测试
-        run: node --test test/mcp-tool-search/*.test.mjs test/theme/*.test.mjs
+        run: pnpm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: 安装测试依赖
+        run: pnpm install --frozen-lockfile
+      - name: 安装真实 Chrome 和系统依赖
+        run: pnpm exec playwright install --with-deps chrome
+      - name: 在受支持 DSH 上运行核心场景
+        run: pnpm test:e2e --dsh-version 0.2.2-rc.1 --suite core --output "$RUNNER_TEMP/ccm-e2e"
+      - name: 保留测试报告、截图和 trace
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: ccm-e2e-core
+          path: ${{ runner.temp }}/ccm-e2e
+          if-no-files-found: warn
+          retention-days: 7

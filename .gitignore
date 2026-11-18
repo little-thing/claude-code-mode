@@ -10,3 +10,8 @@ AGENTS.md
 
 # 本地临时草稿、方案草稿、调研笔记；不进仓库，仓库只留结果
 .dsh/
+
+# 本地端到端验收证据，不随插件和源码发布
+.e2e-output/
+playwright-report/
+test-results/
