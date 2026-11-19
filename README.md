@@ -75,6 +75,11 @@ Restart DSH if the plugin does not load by itself, then refresh the page.
 
 Requires DSH **0.2.2-rc.1** or newer; older hosts are rejected at install time.
 
+## Related plugins
+
+- [dsh-ide-git](https://github.com/KannaKuron/dsh-ide-git): an IDE-grade Git window.
+- [dsh-notify-me](https://github.com/chromoany/dsh-notify-me): desktop notifications when a session needs you or a reply finishes.
+
 ## Compatibility
 
 | DSH version | Status |

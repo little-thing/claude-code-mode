@@ -75,6 +75,11 @@ dsh plugin --profile web add claude-code-mode@latest
 
 需要 DSH **0.2.2-rc.1** 或更高版本，更低版本会在安装时被拒绝。
 
+## 相关插件
+
+- [dsh-ide-git](https://github.com/KannaKuron/dsh-ide-git)：IDE 级 Git 工具窗口。
+- [dsh-notify-me](https://github.com/chromoany/dsh-notify-me)：会话需要你操作、或回复完成时的系统通知。
+
 ## 兼容性
 
 | DSH 版本 | 状态 |

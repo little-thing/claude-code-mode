@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Changed
+
+- README now lists `dsh-ide-git` and `dsh-notify-me` as related plugins. Each
+  entry is a name, a one-line role and a link; details and install steps stay in
+  the plugin's own README.
+
 ## [0.3.6] — 2026-11-17
 
 ### Changed
